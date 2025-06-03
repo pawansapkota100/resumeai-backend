@@ -163,7 +163,7 @@ REST_FRAMEWORK = {
 # CORS settings
 CORS_ALLOWED_ORIGINS = ["http://localhost:3000",
                         "http://127.0.0.1:3000",
-                        "https://resumeai-frontend-delta.vercel.app/",
+                        "https://resumeai-frontend-delta.vercel.app",
                         ]
 CORS_ALLOW_CREDENTIALS = True
 
