@@ -639,7 +639,7 @@ def analyze_resume_with_genai(pdf_path: str, request):
         filename = f"{random.randint(1, 100000)}_annotated_resume.pdf"
         
         # Use your actual static folder path (filesystem) to save
-        save_dir = os.path.join(settings.BASE_DIR, 'static', 'result_resume')
+        save_dir = os.path.join(settings.MEDIA_ROOT, 'result_resume')
         os.makedirs(save_dir, exist_ok=True)
         save_path = os.path.join(save_dir, filename)
 
@@ -648,7 +648,7 @@ def analyze_resume_with_genai(pdf_path: str, request):
 
         # Build the URL to access the annotated PDF
         base_url = f"{request.scheme}://{request.get_host()}"
-        result_pdf_url = f"{base_url}/static/result_resume/{filename}"
+        result_pdf_url = f"{base_url}/media/result_resume/{filename}"
 
     except Exception as e:
         print(f"Error during PDF annotation: {e}")
