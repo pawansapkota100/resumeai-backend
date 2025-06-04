@@ -1,3 +1,5 @@
+import re
+
 import fitz  # PyMuPDF
 import cv2
 import numpy as np
@@ -534,11 +536,60 @@ class GenAIVisualAnalyzer:
         
         return report
     
-    import fitz  # PyMuPDF
+    def extract_text_from_pdf(self,pdf_path):
+        doc = fitz.open(pdf_path)
+        full_text = ""
+        for page in doc:
+            full_text += page.get_text()
+        return full_text
+
+
+    def resume_screening(self, resume_text: str, job_description: str) -> Dict:
+        prompt = f"""
+        NOTE: must be in valid json format
+        You are a reliable and consistent resume screening assistant. Analyze the following resume and job description.
+        Respond ONLY in valid JSON format as described below. Do not add extra explanations.
+
+        First, check if the resume is valid. A valid resume should contain relevant details such as skills, work experience, or education.
+
+        If the resume is invalid or too generic, return:
+
+        {{
+        "valid_resume": false,
+        "message": "The provided resume is not valid. Please upload a valid resume containing skills, experience, or education."
+        }}
+
+        If the resume is valid, return JSON in exactly the following format:
+
+        {{
+        "valid_resume": true,
+        "match_score": <int>,  // 0–100
+        "matching_skills": [<string>],
+        "missing_skills": [<string>],
+        "experience_match": "<brief string>",
+        "education_match": "<Yes/No/Partial + explanation>",
+        "summary": "<string>",
+        "recommendation": "<string: Proceed to interview / Needs review / Not a strong match>"
+        }}
+
+        Resume:
+        {resume_text}
+
+        Job Description:
+        {job_description}
+        """
+
+        result = self.model.generate_content(prompt)
+        text = result.text  # Get plain text response
+        cleaned_text = re.sub(r"^```json\n|```$", "", text.strip())
+        try:
+            return json.loads(cleaned_text)  # Parse JSON string to Python dict
+        except json.JSONDecodeError:
+            return {"error": "Invalid JSON returned by the model", "raw_output": text}
+    
 
 def annotate_pdf_with_comments(pdf_path, output_path, issues):
     doc = fitz.open(pdf_path)
-    print("#################")
     print(issues)
 
     for issue in issues:
@@ -616,8 +667,8 @@ def annotate_pdf_with_comments(pdf_path, output_path, issues):
 import random
 def analyze_resume_with_genai(pdf_path: str, request):
     """Complete resume analysis using GenAI + Computer Vision"""
-    
-    analyzer = GenAIVisualAnalyzer('AIzaSyBuZYhHtZUJmwkQMzkPtHBBsTqudgzVClg')
+    api_key = os.getenv('GENAI_API_KEY')
+    analyzer = GenAIVisualAnalyzer(api_key=api_key)
     
     print("🔍 Starting comprehensive visual analysis...")
     print("1/4 Traditional computer vision analysis...")
@@ -629,7 +680,6 @@ def analyze_resume_with_genai(pdf_path: str, request):
 
     # Generate and display report
     report = analyzer.generate_detailed_report(results)
-    print("############################")
     print(results)
 
     specific_issues = results["detailed_analysis"]["genai_visual"]["specific_issues"]
@@ -663,3 +713,5 @@ def analyze_resume_with_genai(pdf_path: str, request):
 
 # Example usage:
 # results = analyze_resume_with_genai("Pawan Sapkota CV-Python.pdf")
+
+
