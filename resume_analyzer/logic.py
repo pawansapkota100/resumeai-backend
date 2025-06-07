@@ -546,31 +546,83 @@ class GenAIVisualAnalyzer:
 
     def resume_screening(self, resume_text: str, job_description: str) -> Dict:
         prompt = f"""
-        NOTE: must be in valid json format
-        You are a reliable and consistent resume screening assistant. Analyze the following resume and job description.
-        Respond ONLY in valid JSON format as described below. Do not add extra explanations.
+        NOTE: You must respond ONLY in valid JSON format. No additional text, explanations, or formatting outside the JSON structure.
+        
+        You are an expert resume screening assistant with deep knowledge of talent acquisition and technical skills assessment. Your task is to perform a comprehensive analysis of the provided resume against the job description using industry-standard evaluation criteria.
 
-        First, check if the resume is valid. A valid resume should contain relevant details such as skills, work experience, or education.
-
-        If the resume is invalid or too generic, return:
-
+        VALIDATION RULES:
+        First, determine if the resume is valid by checking for ALL of the following:
+        - Contains identifiable work experience, projects, or internships (minimum 1)
+        - Lists specific skills, technologies, or competencies
+        - Includes educational background or relevant certifications
+        - Has sufficient detail to assess professional capabilities (not just contact info or generic statements)
+        
+        If the resume fails ANY validation criteria, return:
         {{
         "valid_resume": false,
         "message": "The provided resume is not valid. Please upload a valid resume containing skills, experience, or education."
         }}
 
-        If the resume is valid, return JSON in exactly the following format:
+        ANALYSIS METHODOLOGY (for valid resumes):
+        Perform detailed evaluation across these dimensions:
 
+        1. SKILLS ANALYSIS:
+        - FIRST: Extract ONLY the actual skills explicitly mentioned in the resume (technical skills, soft skills, programming languages, tools, frameworks, certifications)
+        - SECOND: Extract ALL required and preferred skills from job description
+        - THIRD: Compare and find matches between resume skills and job requirements using semantic understanding (e.g., "React.js" matches "ReactJS", "Machine Learning" matches "ML")
+        - CRITICAL: Only include skills in "matching_skills" that are ACTUALLY PRESENT in the candidate's resume
+        - CRITICAL: Only include skills in "missing_skills" that are required/preferred in job description but NOT found in resume
+        - Consider skill levels and years of experience where mentioned
+        - Weight critical/required skills higher than nice-to-have skills
+
+        2. EXPERIENCE EVALUATION:
+        - Analyze work history relevance to the target role
+        - Consider industry alignment, role progression, and responsibility levels
+        - Evaluate project complexity and impact
+        - Account for career gaps or transitions
+        - Match job titles and functions to required experience
+
+        3. EDUCATION ASSESSMENT:
+        - Compare degree requirements vs. candidate's education
+        - Consider relevant coursework, certifications, and continuous learning
+        - Evaluate if experience can compensate for educational gaps
+        - Account for alternative education paths (bootcamps, self-taught, etc.)
+
+        4. SCORING METHODOLOGY:
+        Calculate match_score (0-100) based on weighted criteria:
+        - Required skills match: 40% weight
+        - Experience relevance: 30% weight  
+        - Education alignment: 15% weight
+        - Preferred skills match: 10% weight
+        - Overall profile fit: 5% weight
+
+        5. RECOMMENDATION LOGIC:
+        - "Proceed to interview": Score 75-100, strong alignment in critical areas
+        - "Needs review": Score 50-74, mixed results requiring human judgment
+        - "Not a strong match": Score 0-49, significant gaps in key requirements
+
+        Return JSON in exactly this format:
         {{
         "valid_resume": true,
-        "match_score": <int>,  // 0–100
-        "matching_skills": [<string>],
-        "missing_skills": [<string>],
-        "experience_match": "<brief string>",
-        "education_match": "<Yes/No/Partial + explanation>",
-        "summary": "<string>",
-        "recommendation": "<string: Proceed to interview / Needs review / Not a strong match>"
+        "match_score": <int>,  // 0–100 calculated using weighted methodology above
+        "matching_skills": [<string>],  // ONLY skills that exist in BOTH the resume AND job requirements - never list skills not present in resume
+        "missing_skills": [<string>],  // ONLY skills required in job description but NOT found in candidate's resume
+        "experience_match": "<brief string>",  // Assess relevance, years, and seniority level alignment
+        "education_match": "<Yes/No/Partial + explanation>",  // Compare degree requirements vs. actual education
+        "summary": "<string>",  // 2-3 sentence objective assessment of candidate's fit
+        "recommendation": "<string: Proceed to interview / Needs review / Not a strong match>"  // Based on scoring logic above
         }}
+
+        IMPORTANT GUIDELINES:
+        - NEVER include skills in "matching_skills" that are not explicitly mentioned in the resume
+        - NEVER assume or infer skills that the candidate might have but didn't list
+        - Be thorough but concise in your analysis
+        - Consider both exact matches and semantic similarities (only for skills actually in resume)
+        - Account for transferable skills and adjacent experience (only what's documented)
+        - Provide specific, actionable insights based solely on resume content
+        - Maintain consistency in scoring across different candidates
+        - Focus on job-relevant qualifications that are actually demonstrated in the resume
+        - This is a candidate filtering system - be accurate about what skills they actually possess
 
         Resume:
         {resume_text}
@@ -705,8 +757,9 @@ def analyze_resume_with_genai(pdf_path: str, request):
         # fallback - no annotated PDF
 
     # Add the report and annotated PDF URL to results
-    results['detailed_report'] = report
+    # results['detailed_report'] = report
     results['annotated_pdf_url'] = result_pdf_url
+    
 
     return results
 

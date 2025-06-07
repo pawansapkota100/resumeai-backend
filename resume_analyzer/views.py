@@ -8,13 +8,20 @@ from core.utils import success_response,error_response
 import tempfile
 import os
 from django.conf import settings
-
-
+from resume_analyzer.models import ResumeAnalysis
+from .utils import calculate_file_hash
+import json 
+# def get_pretty_json(data):
+#     try:
+#         data = json.loads(data)
+#         return json.dumps(data, indent=4)
+#     except json.JSONDecodeError:
+#         return None
 
 class ResumeAnalysisView(APIView):
     serializer_class = ResumeAnalysisSerializer
     parser_classes = [MultiPartParser]
-    permission_classes = (permissions.AllowAny,)
+    permission_classes  = [permissions.IsAuthenticated]
 
     @swagger_auto_schema(request_body=ResumeAnalysisSerializer)
     def post(self, request):
@@ -23,16 +30,38 @@ class ResumeAnalysisView(APIView):
         
         uploaded_file = serializer.validated_data['pdf']
 
-        # Save the uploaded file temporarily
+        # Step 1: Calculate hash of uploaded file
+        file_hash = calculate_file_hash(uploaded_file)
+
+        # Step 2: Check if this resume has already been analyzed
+        existing = ResumeAnalysis.objects.filter(file_hash=file_hash, deleted_at__isnull=True).first()
+
+        # if existing:
+        #     # Reuse previous result
+        #     analysis_result = {
+        #         "detailed_report": existing.get_analysis_result_json(),
+        #         "annotated_pdf_url": existing.resume_file,
+        #         "reused": True  # Optional flag to indicate reuse
+        #     }
+        # else:
+            # Step 3: Save file temporarily for GenAI processing
         with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as temp_file:
             for chunk in uploaded_file.chunks():
                 temp_file.write(chunk)
             temp_file_path = temp_file.name
 
         try:
-            analysis_result = analyze_resume_with_genai(request=request, pdf_path=temp_file_path)
+            # Step 4: Run GenAI analysis
+            analysis_result = analyze_resume_with_genai(pdf_path=temp_file_path, request=request)
+
+            # Step 5: Save result in DB
+            ResumeAnalysis.objects.create(
+                user=request.user,
+                resume_file=analysis_result['annotated_pdf_url'],
+                file_hash=file_hash,
+                analysis_result=analysis_result
+            )
         finally:
-            # Optional: clean up temporary file
             os.remove(temp_file_path)
 
         return success_response(data=analysis_result)
