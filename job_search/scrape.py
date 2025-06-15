@@ -369,15 +369,16 @@ def get_cache_size() -> int:
 # Example usage
 if __name__ == "__main__":
     # Example query
-    search_params = {
-        'keyword': 'QA',
-        'location': ' Australia',
-        'dateSincePosted': 'past week',
-        'jobType': 'full time',
-        'remoteFilter': 'remote',
-        'limit': 50
-    }
+    # search_params = {
+    #     'keyword': 'QA',
+    #     'location': ' Australia',
+    #     'dateSincePosted': 'past week',
+    #     'jobType': 'full time',
+    #     'remoteFilter': 'remote',
+    #     'limit': 50
+    # }
     
+    search_params = {'keyword': 'django developer', 'location': 'usa', 'experience_level': 'associate', 'dateSincePosted': '24hr', 'jobType': 'full time', 'limit': 20}
     try:
         jobs = query(search_params)
         print(f"Found {len(jobs)} jobs:")
@@ -391,3 +392,4 @@ if __name__ == "__main__":
             print("-" * 50)
     except Exception as e:
         print(f"Error: {e}")
+

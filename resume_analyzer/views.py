@@ -36,33 +36,33 @@ class ResumeAnalysisView(APIView):
         # Step 2: Check if this resume has already been analyzed
         existing = ResumeAnalysis.objects.filter(file_hash=file_hash, deleted_at__isnull=True).first()
 
-        # if existing:
-        #     # Reuse previous result
-        #     analysis_result = {
-        #         "detailed_report": existing.get_analysis_result_json(),
-        #         "annotated_pdf_url": existing.resume_file,
-        #         "reused": True  # Optional flag to indicate reuse
-        #     }
-        # else:
+        if existing:
+            # Reuse previous result
+            analysis_result = {
+                "detailed_report": existing.get_analysis_result_json(),
+                "annotated_pdf_url": existing.resume_file,
+                "reused": True  # Optional flag to indicate reuse
+            }
+        else:
             # Step 3: Save file temporarily for GenAI processing
-        with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as temp_file:
-            for chunk in uploaded_file.chunks():
-                temp_file.write(chunk)
-            temp_file_path = temp_file.name
+            with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as temp_file:
+                for chunk in uploaded_file.chunks():
+                    temp_file.write(chunk)
+                temp_file_path = temp_file.name
 
-        try:
-            # Step 4: Run GenAI analysis
-            analysis_result = analyze_resume_with_genai(pdf_path=temp_file_path, request=request)
+            try:
+                # Step 4: Run GenAI analysis
+                analysis_result = analyze_resume_with_genai(pdf_path=temp_file_path, request=request)
 
-            # Step 5: Save result in DB
-            ResumeAnalysis.objects.create(
-                user=request.user,
-                resume_file=analysis_result['annotated_pdf_url'],
-                file_hash=file_hash,
-                analysis_result=analysis_result
-            )
-        finally:
-            os.remove(temp_file_path)
+                # Step 5: Save result in DB
+                ResumeAnalysis.objects.create(
+                    user=request.user,
+                    resume_file=analysis_result['annotated_pdf_url'],
+                    file_hash=file_hash,
+                    analysis_result=analysis_result
+                )
+            finally:
+                os.remove(temp_file_path)
 
         return success_response(data=analysis_result)
 
@@ -74,6 +74,7 @@ from drf_yasg.utils import swagger_auto_schema
 
 class ResumeScreeningAPIView(APIView):
     parser_classes = [MultiPartParser]
+    permission_classes  = [permissions.IsAuthenticated]
 
     @swagger_auto_schema(request_body=ResumeScreeningSerializer)
     def post(self, request, *args, **kwargs):

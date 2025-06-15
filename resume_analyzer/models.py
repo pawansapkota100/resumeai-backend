@@ -5,6 +5,8 @@ from django.db import models
 from django.contrib.auth import get_user_model
 from django.utils import timezone
 
+
+
 User = get_user_model()
 import numpy as np
 from collections import Counter
@@ -17,7 +19,7 @@ class ResumeAnalysisManager(models.Manager):
 class ResumeAnalysis(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='user_analyses')
     resume_file = models.CharField(max_length=255)
-    analysis_result = models.TextField(null=True, blank=True)
+    analysis_result = models.JSONField(blank=True, null=True)
     file_hash = models.CharField(max_length=64)
     uploaded_at = models.DateTimeField(default=timezone.now)
 
@@ -48,15 +50,16 @@ class ResumeAnalysis(models.Model):
             return None
         try:
             # Load string to Python dict
-            data = json.loads(self.analysis_result)
+            data = json.dumps(self.analysis_result)
         except json.JSONDecodeError:
             # If it's not valid JSON, just return the raw string
-            return self.analysis_result
+            pass
         
         # Convert non-serializable objects inside data
-        serializable_data = self.custom_to_serializable(data)
-        # Return pretty JSON string
-        return json.dumps(serializable_data, indent=2)
+        # serializable_data = self.custom_to_serializable(data)
+        # # Return pretty JSON string
+        # return json.dumps(serializable_data, indent=2)
+        return self.analysis_result
         
     def delete(self, using=None, keep_parents=False):
         self.deleted_at = timezone.now()

@@ -542,6 +542,57 @@ class GenAIVisualAnalyzer:
         for page in doc:
             full_text += page.get_text()
         return full_text
+    
+    def analyse_resume_for_job_search(self, resume_text: str) -> Dict:
+        prompt = f"""You are an intelligent resume analyzer. Analyze the provided resume text and extract specific job-related information.
+
+            Tasks:
+            1. Extract the most specific job-related keyword based on skills and experience
+            - Focus on technical skills, programming languages, frameworks, and tools
+            - Examples: 'Python Developer', 'Java Engineer', 'UI/UX Designer', 'Data Scientist', 'DevOps Engineer', 'Full Stack Developer', 'Machine Learning Engineer', 'React Developer', 'QA Automation Engineer', 'Cloud Architect', 'Mobile App Developer'
+            - The keyword should be specific enough for job search APIs
+
+
+            2. Identify any country mentioned in the resume
+            - Current location, preferred location, or past work experience locations
+            - Return country name only
+
+            3. Determine experience level based on:
+            - Years of professional experience mentioned
+            - Job titles and seniority indicators
+            - Scope of responsibilities and leadership roles
+            - Project complexity and team size
+
+            Experience Level Classification:
+            - internship: 0 years, intern roles, student positions, fresh graduates
+            - entry level: 0-2 years of professional experience, junior roles
+            - associate: 2-5 years of experience, mid-level roles, some specialization
+            - senior: 5-10 years of experience, senior titles, technical leadership, mentoring
+            - director: 10+ years, management roles, team leadership, strategic responsibilities
+            - executive: C-level positions, VP roles, extensive leadership, business strategy
+
+            Analysis Guidelines:
+            - Prioritize the most prominent and recent technical skills
+            - Consider the combination of skills to determine the most accurate job role
+            - If multiple technologies are mentioned, focus on the primary/strongest skillset
+            - Include seniority level in keyword when experience warrants it
+
+            Return ONLY valid JSON in this exact format:
+            {{
+            "keyword": "specific job title based on skills and experience",
+            "location": "Country name or 'Not specified'",
+            "experience_level": "one of: internship, entry level, associate, senior, director, executive"
+            }}
+
+            Resume text: {resume_text}"""
+        result = self.model.generate_content(prompt)
+        text = result.text  # Get plain text response
+        cleaned_text = re.sub(r"^```json\n|```$", "", text.strip())
+        try:
+            return json.loads(cleaned_text)  # Parse JSON string to Python dict
+        except json.JSONDecodeError:
+            return {"error": "Invalid JSON returned by the model", "raw_output": text}
+
 
 
     def resume_screening(self, resume_text: str, job_description: str) -> Dict:
