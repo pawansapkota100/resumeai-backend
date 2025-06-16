@@ -94,6 +94,7 @@ class FirebaseAuthView(APIView):
             decoded_token = auth.verify_id_token(firebase_token)
             uid = decoded_token['uid']  # The Firebase UID of the user
             email=decoded_token.get('email')
+            picture = decoded_token.get('picture')
 
             
             # Step 2: Fetch or create user in the database
@@ -107,6 +108,8 @@ class FirebaseAuthView(APIView):
                 user.is_social_login=True
                 user.firebase_uid= uid
                 user.save()
+
+                UserProfile.objects.create(user=user, bio='', location='', image='',created_at=datetime.now(),updated_at=datetime.now())
 
             if user.is_social_login != True:
                 return error_response(message="You already have account from this email")

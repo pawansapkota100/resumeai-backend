@@ -21,7 +21,7 @@ import json
 class ResumeAnalysisView(APIView):
     serializer_class = ResumeAnalysisSerializer
     parser_classes = [MultiPartParser]
-    permission_classes  = [permissions.IsAuthenticated]
+    permission_classes = [permissions.IsAuthenticated]
 
     @swagger_auto_schema(request_body=ResumeAnalysisSerializer)
     def post(self, request):
@@ -40,8 +40,8 @@ class ResumeAnalysisView(APIView):
             # Reuse previous result
             analysis_result = {
                 "detailed_report": existing.get_analysis_result_json(),
-                "annotated_pdf_url": existing.resume_file,
-                "reused": True  # Optional flag to indicate reuse
+                "annotated_pdf_url": existing.resume_file.url,  # Use .url to get the full URL
+                "reused": True
             }
         else:
             # Step 3: Save file temporarily for GenAI processing
@@ -54,13 +54,17 @@ class ResumeAnalysisView(APIView):
                 # Step 4: Run GenAI analysis
                 analysis_result = analyze_resume_with_genai(pdf_path=temp_file_path, request=request)
 
-                # Step 5: Save result in DB
-                ResumeAnalysis.objects.create(
+                # Step 5: Save result in DB with the file
+                resume_analysis = ResumeAnalysis.objects.create(
                     user=request.user,
-                    resume_file=analysis_result['annotated_pdf_url'],
+                    resume_file=analysis_result['annotated_pdf_url'],  # Save the actual file
                     file_hash=file_hash,
                     analysis_result=analysis_result
                 )
+                
+                # Update the analysis result with the file URL
+                # analysis_result['annotated_pdf_url'] = resume_analysis.resume_file
+                    
             finally:
                 os.remove(temp_file_path)
 

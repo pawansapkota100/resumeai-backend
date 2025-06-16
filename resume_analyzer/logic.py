@@ -54,17 +54,11 @@ class GenAIVisualAnalyzer:
         return combined_results
     
     def _pdf_to_base64_image(self, pdf_path: str) -> str:
-        """Convert PDF first page to high-quality base64 image"""
         doc = fitz.open(pdf_path)
         page = doc[0]
-        
-        # High resolution for better GenAI analysis
         pix = page.get_pixmap(matrix=fitz.Matrix(3, 3))
         img_data = pix.tobytes("png")
-        
         doc.close()
-        
-        # Convert to base64
         img_base64 = base64.b64encode(img_data).decode('utf-8')
         return img_base64
     
@@ -250,19 +244,21 @@ class GenAIVisualAnalyzer:
             # Generate content with Gemini
             response = self.model.generate_content([prompt, image])
             
+            text = response.text  # Get plain text response
+            response_text = re.sub(r"^```json\n|```$", "", text.strip())
             # Clean response text
-            response_text = response.text.strip()
-            print(f"Raw response: {response_text[:200]}...")  # Debug print
+            # response_text = response.text.strip()
+            # print(f"Raw response: {response_text[:200]}...")  # Debug print
             
-            # Remove markdown code blocks if present
-            if response_text.startswith('```json'):
-                response_text = response_text[7:]
-            if response_text.startswith('```'):
-                response_text = response_text[3:]
-            if response_text.endswith('```'):
-                response_text = response_text[:-3]
+            # # Remove markdown code blocks if present
+            # if response_text.startswith('```json'):
+            #     response_text = response_text[7:]
+            # if response_text.startswith('```'):
+            #     response_text = response_text[3:]
+            # if response_text.endswith('```'):
+            #     response_text = response_text[:-3]
             
-            response_text = response_text.strip()
+            # response_text = response_text.strip()
             
             # Parse JSON
             return json.loads(response_text)
@@ -323,18 +319,20 @@ class GenAIVisualAnalyzer:
             response = self.model.generate_content([prompt, image])
             
             # Clean response text
-            response_text = response.text.strip()
-            print(f"Design critique raw response: {response_text[:200]}...")  # Debug print
+            # response_text = response.text.strip()
+            response_text = response.text  # Get plain text response
+            response_text = re.sub(r"^```json\n|```$", "", response_text.strip())
+
             
-            # Remove markdown code blocks if present
-            if response_text.startswith('```json'):
-                response_text = response_text[7:]
-            if response_text.startswith('```'):
-                response_text = response_text[3:]
-            if response_text.endswith('```'):
-                response_text = response_text[:-3]
+            # # Remove markdown code blocks if present
+            # if response_text.startswith('```json'):
+            #     response_text = response_text[7:]
+            # if response_text.startswith('```'):
+            #     response_text = response_text[3:]
+            # if response_text.endswith('```'):
+            #     response_text = response_text[:-3]
             
-            response_text = response_text.strip()
+            # response_text = response_text.strip()
             
             return json.loads(response_text)
             
@@ -768,6 +766,22 @@ def annotate_pdf_with_comments(pdf_path, output_path, issues):
 
 # Usage Example
 import random
+from django.core.files.base import ContentFile
+from storages.backends.s3boto3 import S3Boto3Storage
+import random
+import io
+import fitz  # PyMuPDF
+
+def annotate_pdf_with_comments_to_bytes(pdf_path, specific_issues):
+    doc = fitz.open(pdf_path)
+    
+    # TODO: Add your annotation logic using `specific_issues`
+
+    pdf_buffer = io.BytesIO()
+    doc.save(pdf_buffer)
+    doc.close()
+    return pdf_buffer.getvalue()
+
 def analyze_resume_with_genai(pdf_path: str, request):
     """Complete resume analysis using GenAI + Computer Vision"""
     api_key = os.getenv('GENAI_API_KEY')
@@ -790,18 +804,20 @@ def analyze_resume_with_genai(pdf_path: str, request):
     result_pdf_url = None
     try:
         filename = f"{random.randint(1, 100000)}_annotated_resume.pdf"
-        
-        # Use your actual static folder path (filesystem) to save
-        save_dir = os.path.join(settings.MEDIA_ROOT, 'result_resume')
-        os.makedirs(save_dir, exist_ok=True)
-        save_path = os.path.join(save_dir, filename)
+        s3_path = f"result_resume/{filename}"
 
-        # Annotate and save PDF
-        annotate_pdf_with_comments(pdf_path, save_path, specific_issues)
+        # Generate annotated PDF as bytes
+        annotated_pdf_bytes = annotate_pdf_with_comments_to_bytes(pdf_path, specific_issues)
 
-        # Build the URL to access the annotated PDF
-        base_url = f"{request.scheme}://{request.get_host()}"
-        result_pdf_url = f"{base_url}/media/result_resume/{filename}"
+        # Initialize S3Boto3Storage
+        storage = S3Boto3Storage()
+
+        # Save the file to Supabase S3 using Django Storage
+        content_file = ContentFile(annotated_pdf_bytes)
+        storage.save(s3_path, content_file)
+
+        # Build public URL
+        public_url = f"https://{settings.AWS_S3_CUSTOM_DOMAIN}/{s3_path}"
 
     except Exception as e:
         print(f"Error during PDF annotation: {e}")
@@ -809,7 +825,8 @@ def analyze_resume_with_genai(pdf_path: str, request):
 
     # Add the report and annotated PDF URL to results
     # results['detailed_report'] = report
-    results['annotated_pdf_url'] = result_pdf_url
+    results['annotated_pdf_url'] = public_url
+
     
 
     return results
