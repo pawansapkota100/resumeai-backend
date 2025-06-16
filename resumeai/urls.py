@@ -25,6 +25,7 @@ from rest_framework.permissions import AllowAny
 from drf_yasg.views import get_schema_view
 from drf_yasg import openapi
 from django.contrib.auth import views as auth_views
+from rest_framework.authentication import TokenAuthentication
 
 
 schema_view = get_schema_view(
@@ -44,6 +45,8 @@ urlpatterns += [
     path('admin/', admin.site.urls),
     path('api/v1/', include('core.urls')),
     path('api/v1/', include('resume_analyzer.urls')),
+    path('api/v1/', include('rolesuggestion.urls')),
+    path('api/v1/',include('job_search.urls')),
     path('accounts/login/', auth_views.LoginView.as_view(), name='login'),
     
     path('redoc/', schema_view.with_ui('redoc', cache_timeout=0), name='schema-redoc'),

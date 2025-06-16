@@ -54,17 +54,11 @@ class GenAIVisualAnalyzer:
         return combined_results
     
     def _pdf_to_base64_image(self, pdf_path: str) -> str:
-        """Convert PDF first page to high-quality base64 image"""
         doc = fitz.open(pdf_path)
         page = doc[0]
-        
-        # High resolution for better GenAI analysis
         pix = page.get_pixmap(matrix=fitz.Matrix(3, 3))
         img_data = pix.tobytes("png")
-        
         doc.close()
-        
-        # Convert to base64
         img_base64 = base64.b64encode(img_data).decode('utf-8')
         return img_base64
     
@@ -250,19 +244,21 @@ class GenAIVisualAnalyzer:
             # Generate content with Gemini
             response = self.model.generate_content([prompt, image])
             
+            text = response.text  # Get plain text response
+            response_text = re.sub(r"^```json\n|```$", "", text.strip())
             # Clean response text
-            response_text = response.text.strip()
-            print(f"Raw response: {response_text[:200]}...")  # Debug print
+            # response_text = response.text.strip()
+            # print(f"Raw response: {response_text[:200]}...")  # Debug print
             
-            # Remove markdown code blocks if present
-            if response_text.startswith('```json'):
-                response_text = response_text[7:]
-            if response_text.startswith('```'):
-                response_text = response_text[3:]
-            if response_text.endswith('```'):
-                response_text = response_text[:-3]
+            # # Remove markdown code blocks if present
+            # if response_text.startswith('```json'):
+            #     response_text = response_text[7:]
+            # if response_text.startswith('```'):
+            #     response_text = response_text[3:]
+            # if response_text.endswith('```'):
+            #     response_text = response_text[:-3]
             
-            response_text = response_text.strip()
+            # response_text = response_text.strip()
             
             # Parse JSON
             return json.loads(response_text)
@@ -323,18 +319,20 @@ class GenAIVisualAnalyzer:
             response = self.model.generate_content([prompt, image])
             
             # Clean response text
-            response_text = response.text.strip()
-            print(f"Design critique raw response: {response_text[:200]}...")  # Debug print
+            # response_text = response.text.strip()
+            response_text = response.text  # Get plain text response
+            response_text = re.sub(r"^```json\n|```$", "", response_text.strip())
+
             
-            # Remove markdown code blocks if present
-            if response_text.startswith('```json'):
-                response_text = response_text[7:]
-            if response_text.startswith('```'):
-                response_text = response_text[3:]
-            if response_text.endswith('```'):
-                response_text = response_text[:-3]
+            # # Remove markdown code blocks if present
+            # if response_text.startswith('```json'):
+            #     response_text = response_text[7:]
+            # if response_text.startswith('```'):
+            #     response_text = response_text[3:]
+            # if response_text.endswith('```'):
+            #     response_text = response_text[:-3]
             
-            response_text = response_text.strip()
+            # response_text = response_text.strip()
             
             return json.loads(response_text)
             
@@ -542,35 +540,138 @@ class GenAIVisualAnalyzer:
         for page in doc:
             full_text += page.get_text()
         return full_text
+    
+    def analyse_resume_for_job_search(self, resume_text: str) -> Dict:
+        prompt = f"""You are an intelligent resume analyzer. Analyze the provided resume text and extract specific job-related information.
+
+            Tasks:
+            1. Extract the most specific job-related keyword based on skills and experience
+            - Focus on technical skills, programming languages, frameworks, and tools
+            - Examples: 'Python Developer', 'Java Engineer', 'UI/UX Designer', 'Data Scientist', 'DevOps Engineer', 'Full Stack Developer', 'Machine Learning Engineer', 'React Developer', 'QA Automation Engineer', 'Cloud Architect', 'Mobile App Developer'
+            - The keyword should be specific enough for job search APIs
+
+
+            2. Identify any country mentioned in the resume
+            - Current location, preferred location, or past work experience locations
+            - Return country name only
+
+            3. Determine experience level based on:
+            - Years of professional experience mentioned
+            - Job titles and seniority indicators
+            - Scope of responsibilities and leadership roles
+            - Project complexity and team size
+
+            Experience Level Classification:
+            - internship: 0 years, intern roles, student positions, fresh graduates
+            - entry level: 0-2 years of professional experience, junior roles
+            - associate: 2-5 years of experience, mid-level roles, some specialization
+            - senior: 5-10 years of experience, senior titles, technical leadership, mentoring
+            - director: 10+ years, management roles, team leadership, strategic responsibilities
+            - executive: C-level positions, VP roles, extensive leadership, business strategy
+
+            Analysis Guidelines:
+            - Prioritize the most prominent and recent technical skills
+            - Consider the combination of skills to determine the most accurate job role
+            - If multiple technologies are mentioned, focus on the primary/strongest skillset
+            - Include seniority level in keyword when experience warrants it
+
+            Return ONLY valid JSON in this exact format:
+            {{
+            "keyword": "specific job title based on skills and experience",
+            "location": "Country name or 'Not specified'",
+            "experience_level": "one of: internship, entry level, associate, senior, director, executive"
+            }}
+
+            Resume text: {resume_text}"""
+        result = self.model.generate_content(prompt)
+        text = result.text  # Get plain text response
+        cleaned_text = re.sub(r"^```json\n|```$", "", text.strip())
+        try:
+            return json.loads(cleaned_text)  # Parse JSON string to Python dict
+        except json.JSONDecodeError:
+            return {"error": "Invalid JSON returned by the model", "raw_output": text}
+
 
 
     def resume_screening(self, resume_text: str, job_description: str) -> Dict:
         prompt = f"""
-        NOTE: must be in valid json format
-        You are a reliable and consistent resume screening assistant. Analyze the following resume and job description.
-        Respond ONLY in valid JSON format as described below. Do not add extra explanations.
+        NOTE: You must respond ONLY in valid JSON format. No additional text, explanations, or formatting outside the JSON structure.
+        
+        You are an expert resume screening assistant with deep knowledge of talent acquisition and technical skills assessment. Your task is to perform a comprehensive analysis of the provided resume against the job description using industry-standard evaluation criteria.
 
-        First, check if the resume is valid. A valid resume should contain relevant details such as skills, work experience, or education.
-
-        If the resume is invalid or too generic, return:
-
+        VALIDATION RULES:
+        First, determine if the resume is valid by checking for ALL of the following:
+        - Contains identifiable work experience, projects, or internships (minimum 1)
+        - Lists specific skills, technologies, or competencies
+        - Includes educational background or relevant certifications
+        - Has sufficient detail to assess professional capabilities (not just contact info or generic statements)
+        
+        If the resume fails ANY validation criteria, return:
         {{
         "valid_resume": false,
         "message": "The provided resume is not valid. Please upload a valid resume containing skills, experience, or education."
         }}
 
-        If the resume is valid, return JSON in exactly the following format:
+        ANALYSIS METHODOLOGY (for valid resumes):
+        Perform detailed evaluation across these dimensions:
 
+        1. SKILLS ANALYSIS:
+        - FIRST: Extract ONLY the actual skills explicitly mentioned in the resume (technical skills, soft skills, programming languages, tools, frameworks, certifications)
+        - SECOND: Extract ALL required and preferred skills from job description
+        - THIRD: Compare and find matches between resume skills and job requirements using semantic understanding (e.g., "React.js" matches "ReactJS", "Machine Learning" matches "ML")
+        - CRITICAL: Only include skills in "matching_skills" that are ACTUALLY PRESENT in the candidate's resume
+        - CRITICAL: Only include skills in "missing_skills" that are required/preferred in job description but NOT found in resume
+        - Consider skill levels and years of experience where mentioned
+        - Weight critical/required skills higher than nice-to-have skills
+
+        2. EXPERIENCE EVALUATION:
+        - Analyze work history relevance to the target role
+        - Consider industry alignment, role progression, and responsibility levels
+        - Evaluate project complexity and impact
+        - Account for career gaps or transitions
+        - Match job titles and functions to required experience
+
+        3. EDUCATION ASSESSMENT:
+        - Compare degree requirements vs. candidate's education
+        - Consider relevant coursework, certifications, and continuous learning
+        - Evaluate if experience can compensate for educational gaps
+        - Account for alternative education paths (bootcamps, self-taught, etc.)
+
+        4. SCORING METHODOLOGY:
+        Calculate match_score (0-100) based on weighted criteria:
+        - Required skills match: 40% weight
+        - Experience relevance: 30% weight  
+        - Education alignment: 15% weight
+        - Preferred skills match: 10% weight
+        - Overall profile fit: 5% weight
+
+        5. RECOMMENDATION LOGIC:
+        - "Proceed to interview": Score 75-100, strong alignment in critical areas
+        - "Needs review": Score 50-74, mixed results requiring human judgment
+        - "Not a strong match": Score 0-49, significant gaps in key requirements
+
+        Return JSON in exactly this format:
         {{
         "valid_resume": true,
-        "match_score": <int>,  // 0–100
-        "matching_skills": [<string>],
-        "missing_skills": [<string>],
-        "experience_match": "<brief string>",
-        "education_match": "<Yes/No/Partial + explanation>",
-        "summary": "<string>",
-        "recommendation": "<string: Proceed to interview / Needs review / Not a strong match>"
+        "match_score": <int>,  // 0–100 calculated using weighted methodology above
+        "matching_skills": [<string>],  // ONLY skills that exist in BOTH the resume AND job requirements - never list skills not present in resume
+        "missing_skills": [<string>],  // ONLY skills required in job description but NOT found in candidate's resume
+        "experience_match": "<brief string>",  // Assess relevance, years, and seniority level alignment
+        "education_match": "<Yes/No/Partial + explanation>",  // Compare degree requirements vs. actual education
+        "summary": "<string>",  // 2-3 sentence objective assessment of candidate's fit
+        "recommendation": "<string: Proceed to interview / Needs review / Not a strong match>"  // Based on scoring logic above
         }}
+
+        IMPORTANT GUIDELINES:
+        - NEVER include skills in "matching_skills" that are not explicitly mentioned in the resume
+        - NEVER assume or infer skills that the candidate might have but didn't list
+        - Be thorough but concise in your analysis
+        - Consider both exact matches and semantic similarities (only for skills actually in resume)
+        - Account for transferable skills and adjacent experience (only what's documented)
+        - Provide specific, actionable insights based solely on resume content
+        - Maintain consistency in scoring across different candidates
+        - Focus on job-relevant qualifications that are actually demonstrated in the resume
+        - This is a candidate filtering system - be accurate about what skills they actually possess
 
         Resume:
         {resume_text}
@@ -665,6 +766,22 @@ def annotate_pdf_with_comments(pdf_path, output_path, issues):
 
 # Usage Example
 import random
+from django.core.files.base import ContentFile
+from storages.backends.s3boto3 import S3Boto3Storage
+import random
+import io
+import fitz  # PyMuPDF
+
+def annotate_pdf_with_comments_to_bytes(pdf_path, specific_issues):
+    doc = fitz.open(pdf_path)
+    
+    # TODO: Add your annotation logic using `specific_issues`
+
+    pdf_buffer = io.BytesIO()
+    doc.save(pdf_buffer)
+    doc.close()
+    return pdf_buffer.getvalue()
+
 def analyze_resume_with_genai(pdf_path: str, request):
     """Complete resume analysis using GenAI + Computer Vision"""
     api_key = os.getenv('GENAI_API_KEY')
@@ -687,26 +804,30 @@ def analyze_resume_with_genai(pdf_path: str, request):
     result_pdf_url = None
     try:
         filename = f"{random.randint(1, 100000)}_annotated_resume.pdf"
-        
-        # Use your actual static folder path (filesystem) to save
-        save_dir = os.path.join(settings.MEDIA_ROOT, 'result_resume')
-        os.makedirs(save_dir, exist_ok=True)
-        save_path = os.path.join(save_dir, filename)
+        s3_path = f"result_resume/{filename}"
 
-        # Annotate and save PDF
-        annotate_pdf_with_comments(pdf_path, save_path, specific_issues)
+        # Generate annotated PDF as bytes
+        annotated_pdf_bytes = annotate_pdf_with_comments_to_bytes(pdf_path, specific_issues)
 
-        # Build the URL to access the annotated PDF
-        base_url = f"{request.scheme}://{request.get_host()}"
-        result_pdf_url = f"{base_url}/media/result_resume/{filename}"
+        # Initialize S3Boto3Storage
+        storage = S3Boto3Storage()
+
+        # Save the file to Supabase S3 using Django Storage
+        content_file = ContentFile(annotated_pdf_bytes)
+        storage.save(s3_path, content_file)
+
+        # Build public URL
+        public_url = f"https://{settings.AWS_S3_CUSTOM_DOMAIN}/{s3_path}"
 
     except Exception as e:
         print(f"Error during PDF annotation: {e}")
         # fallback - no annotated PDF
 
     # Add the report and annotated PDF URL to results
-    results['detailed_report'] = report
-    results['annotated_pdf_url'] = result_pdf_url
+    # results['detailed_report'] = report
+    results['annotated_pdf_url'] = public_url
+
+    
 
     return results
 

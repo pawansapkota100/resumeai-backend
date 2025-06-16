@@ -49,10 +49,13 @@ INSTALLED_APPS = [
     'drf_yasg',
     'cloudinary',
     'cloudinary_storage',
+    'storages',
     
     # Local apps
     'core',
-    'resume_analyzer'
+    'resume_analyzer',
+    'job_search',
+    'rolesuggestion',
 ]
 
 MIDDLEWARE = [
@@ -91,11 +94,26 @@ WSGI_APPLICATION = 'resumeai.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/5.0/ref/settings/#databases
 
+# DATABASES = {
+#     'default': {
+#         'ENGINE': 'django.db.backends.postgresql',
+#         'NAME': os.getenv('SUPABASE_DB_NAME'),
+#         'USER': os.getenv('SUPABASE_DB_USER'),
+#         'PASSWORD': os.getenv('SUPABASE_DB_PASSWORD'),
+#         'HOST': os.getenv('SUPABASE_DB_HOST'),
+#         'PORT': os.getenv('SUPABASE_DB_PORT'),
+#         'OPTIONS': {
+#             'sslmode': 'require',
+#             'connect_timeout': 10,  # Helps prevent timeouts
+#         },
+#     }
+# }
+
+import dj_database_url
+import os
+
 DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
-    }
+    'default': dj_database_url.parse(os.environ.get('SUPABASE_DATABASE_URL'), conn_max_age=600)
 }
 
 
@@ -129,7 +147,7 @@ USE_I18N = True
 
 USE_TZ = True
 
-STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
+# STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/5.0/howto/static-files/
@@ -143,20 +161,26 @@ STATICFILES_DIRS = [
 STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 
 ENVIRONMENT = os.getenv('DJANGO_ENV', 'development')
-
-
-if ENVIRONMENT == 'production':
-    DEFAULT_FILE_STORAGE = 'cloudinary_storage.storage.MediaCloudinaryStorage'
-
-    CLOUDINARY_STORAGE = {
-        'CLOUD_NAME': os.getenv('CLOUDINARY_CLOUD_NAME'),
-        'API_KEY': os.getenv('CLOUDINARY_API_KEY'),
-        'API_SECRET': os.getenv('CLOUDINARY_API_SECRET'),
-    }
-
-else:  # development (local)
-    MEDIA_URL = '/media/'
-    MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
+AWS_ACCESS_KEY_ID = os.getenv('SUPABASE_ACCESS_KEY_ID')
+AWS_SECRET_ACCESS_KEY = os.getenv('SUPABASE_SECRET_ACCESS_KEY')
+AWS_STORAGE_BUCKET_NAME = os.getenv('SUPABASE_STORAGE_BUCKET_NAME')
+AWS_S3_ENDPOINT_URL = os.getenv('SUPABASE_S3_ENDPOINT_URL')
+AWS_S3_FILE_OVERWRITE = False
+AWS_DEFAULT_ACL = None
+AWS_QUERYSTRING_AUTH = False
+AWS_S3_OBJECT_PARAMETERS = {
+    'CacheControl': 'max-age=86400',
+}
+AWS_S3_CUSTOM_DOMAIN= os.getenv('AWS_S3_CUSTOM_DOMAIN')
+STORAGES = {
+    "default": {
+        "BACKEND": "storages.backends.s3boto3.S3Boto3Storage",
+    },
+    "staticfiles": {
+        "BACKEND": 'whitenoise.storage.CompressedManifestStaticFilesStorage',
+        
+    },
+}
 
 
 
@@ -195,3 +219,39 @@ SIMPLE_JWT = {
     'BLACKLIST_AFTER_ROTATION': True,
 }
 LOGIN_URL = '/accounts/login/'
+
+GOOGLE_APPLICATION_CREDENTIALS={
+  "type": "service_account",
+  "project_id": "resumeai-91c9b",
+  "private_key_id": "293f0a3045a8a3982ebb192c33580c1f0c4946ce",
+  "private_key": "-----BEGIN PRIVATE KEY-----\nMIIEvAIBADANBgkqhkiG9w0BAQEFAASCBKYwggSiAgEAAoIBAQCYlbdhZmRFCd39\nvFeBhgOwlzeTsfe8s5+JrSafkN315zAkT1nJzTCJQeJouNNJWSP0Aa2msPCsuISL\nnuHQ0ZwjtnWKlTcN9R/wVQZoScOXSC2XbgEnDCQv+r1SNhxzoe0e8m1fFNggTPgQ\nM0kjcG5/F5jhN3bZWbRVkIUh3Fap8y5kZWRVEJ7CXzX1tD6c9WwHMJFE7kKUzw+5\nYKJpzMsUTAi6UrbZPBhjZCF8vau0ufBxAsoKG/2BUzIpqsYIRHlevtN074qd+fQQ\nyavu35nF0B9M7eGJEZaj4mQXftxOTj3uT6SiFHL3vqbyu5W1JKl9L41Ez02icmTg\ncrS3xlqfAgMBAAECggEABrUmL5jxtXs+kAX0jtQWW2/6WHrNWjVHQSUkeoVCzKmS\nGzaFyvJDPPVxf4sIdsP9aZ+dQ6OpoN4nrX+Zi7V7OLKvrhzrI6jv83+5XWJIv+DD\naFHEqTPGb3mFUxTf4VFv/BlKJ5DiA2F+0i9++pjZsqqV5OisR9fCrrRAtgFaqfPe\nZw5ojCSH6qsGqFf+CSEbNR8crsjtIysHAoz2OmthHx4PujkH/mlAEjmOMUf6dN2a\nOvyiapCSjoqwNChOraiLyNkE4O7tsrPfzbqW69bnzSMcTyS5Bp1CBhnjWrgdHy7e\njzh9r1FkLw/V1ThRv8N+s9Cb7sVenuQBWYUhXIYI2QKBgQDLNM+PQxofyvjP5R8K\nx5TxXbMdvjj/37Op3LfCjKJw5GaMLft9bH772M6T4qri29mHU5n7JkssPfLPzIgG\nwOO1XIhM5JewVZ7gZxcEKY9uhe1evdXppHOs827YfRhwhHuVDoWsmbqz0AmzgoKo\nkKT1+wxzEhDTl12daW7/pIC8ywKBgQDAOhZbMmObvR09Vb7X2sjbf0ELkktZRN1b\n8oVwlGzyn5Mg/8nruTlKy05XPDlfTDWHL3WoIU5zr361GrafHYGD0XKHdOc2o4/n\nAKerBTetET48fkvva+wj2//mii+y2TI0dk9aalqt9xmMLi/0VSvd3bjZvgvtF2B3\nAG9p7qCS/QKBgHW3/F4UE3hDj2xwYVFPWZuSGoeqgT7KCzzmHpZX/mrEBhxDLyPz\nzIR9jv7hGvodPqFE7zktb/MLWDTFWi//YmrYViWlb7K5hzacwhqpMOxoLaDq/JdD\nq7ePtrE3lwbn2Of657mbvSsZ4+TYQHUChm3xp76pwpGxaIweXi0+0U2NAoGABvOS\nz2V5GK60Gf250xCEZvupHIQD2YyV/Lc+gB29+uAub+kQIkgmfD/x61GwOXQGE4dx\n18ysi55zFJWMuSBWCLBQVfmyStWLZK0vYw3jP4z6FTH0CQp8FaflDy88HlmgaSlG\nIVzrPpNLBzi8XzedSH62Kpmm0MIhqOwJG2mXwPkCgYBKsO4fMyTJkXd9Wbuszrrf\n7VlClT2fXFd2SaGEc38GJqPCWGtZsutIZHDrftJZaJaQ8xAGXeHQAiqjohe40cVR\nrm4JLaLmE/uAWKkgaORNy+gxTtf687pwqGKYyoebj5CoO3QMlcAvgTINh5nFjbzc\nduPYCRDx7Q2XnSdZwHuA5Q==\n-----END PRIVATE KEY-----\n",
+  "client_email": "firebase-adminsdk-fbsvc@resumeai-91c9b.iam.gserviceaccount.com",
+  "client_id": "104519837616835054733",
+  "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+  "token_uri": "https://oauth2.googleapis.com/token",
+  "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+  "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/firebase-adminsdk-fbsvc%40resumeai-91c9b.iam.gserviceaccount.com",
+  "universe_domain": "googleapis.com"
+}
+
+
+SWAGGER_SETTINGS = {
+    'USE_SESSION_AUTH': False,
+    'PERSIST_AUTH': True,
+    'SECURITY_DEFINITIONS': {
+        'api_key': {
+            'type': 'apiKey',
+            'in': 'header',
+            'name': 'Authorization',
+            "description": "How to authenticate api. Example: 'Bearer {JWT}'"
+
+        }
+
+    }
+}
+
+
+CSRF_TRUSTED_ORIGINS = [
+    'http://localhost:3000',
+    'http://127.0.0.1:3000',
+]

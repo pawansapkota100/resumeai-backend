@@ -12,5 +12,5 @@ urlpatterns = [
     # Resume processing endpoints
     # path('resume/analyze/', views.ResumeAnalyzeView.as_view(), name='resume-analyze'),
     path('resume/suggestions/', views.ResumeSuggestionsView.as_view(), name='resume-suggestions'),
-    # path('resume/history/', views.ResumeHistoryView.as_view(), name='resume-history'),
+    path('signup/firebase/', views.FirebaseAuthView.as_view(), name='firebase-auth'),
 ] 
