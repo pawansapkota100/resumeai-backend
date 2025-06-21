@@ -12,6 +12,7 @@ class ScrapeJobViewset(viewsets.ModelViewSet):
     parser_classes = [MultiPartParser]
     serializer_class=JobSerchingSerializer
     http_method_names = ['post']
+    api_credit_cost= os.getenv('API_COST')
 
     def create(self, request, *args, **kwargs):
         serializer=self.get_serializer(data=request.data)

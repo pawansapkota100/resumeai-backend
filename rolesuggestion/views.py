@@ -13,6 +13,7 @@ analyser=GenAIVisualAnalyzer(api_key='d')
 class roleSuggestionView(viewsets.ModelViewSet):
     parser_classes = [MultiPartParser]
     serializer_class = RoleSuggestionSerializer
+    api_credit_cost= os.getenv('API_COST')
 
 
     def create(self, request, *args, **kwargs):
