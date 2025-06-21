@@ -21,5 +21,6 @@ urlpatterns = [
     path('billing-info/', views.BillingDetailsView.as_view(), name='billing-info'),
     path('profile-notification/', views.ProfileNotificationView.as_view(), name='profile-notification'),
     path('', include(router.urls)),
+    path('is-social-login/', views.IsSocialLogin.as_view(), name='is-social-login'),
 
 ] 
