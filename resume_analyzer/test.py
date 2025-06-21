@@ -1,14 +1,6 @@
 import random
 import fitz  # PyMuPDF
-import cv2
-import numpy as np
-import base64
-import json
-from collections import Counter
-from PIL import Image
-import io
-from typing import Dict, List, Tuple
-import google.generativeai as genai
+
 
 
 data={

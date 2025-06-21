@@ -3,13 +3,11 @@ from rest_framework import generics, permissions, status
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from django.contrib.auth import get_user_model
-from sympy import true
-from yaml import serialize
 
-from job_search import serializer
-from .models import BillingRecord, UserProfile, ResumeAnalysis
-from .serializers import BillingSerializer, PasswordChangeSerializer, ProfileNotificationSerializer, UserProfileSerializer, UserProfileUpdateSerializer, UserRegistrationSerializer, UserSerializer
-from firebase_admin import credentials, auth, firestore
+
+from .models import BillingRecord, UserProfile
+from .serializers import BillingSerializer, PasswordChangeSerializer, ProfileNotificationSerializer, UserProfileUpdateSerializer, UserRegistrationSerializer, UserSerializer
+from firebase_admin import credentials, auth
 import firebase_admin
 import firebase_admin.exceptions
 from datetime import datetime, timedelta

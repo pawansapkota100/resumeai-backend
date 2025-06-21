@@ -1,10 +1,6 @@
-from turtle import mode
-from typing import Required
-from attr import fields
-from pkg_resources import require
 from rest_framework import serializers
 from django.contrib.auth import get_user_model
-from .models import BillingRecord, UserProfile, ResumeAnalysis
+from .models import BillingRecord, UserProfile
 
 User = get_user_model()
 

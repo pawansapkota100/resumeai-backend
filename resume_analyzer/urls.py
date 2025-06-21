@@ -1,6 +1,6 @@
 from .views import CoverletterGenerator, ResumeAnalysisView,ResumeScreeningAPIView
 
-from django.urls import path, include
+from django.urls import path
 
 urlpatterns = [
         path('resume-analysis/', ResumeAnalysisView.as_view(), name='resume-analysis'),

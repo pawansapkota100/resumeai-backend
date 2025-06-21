@@ -8,7 +8,7 @@ import json
 from collections import Counter
 from PIL import Image
 import io
-from typing import Dict, List, Tuple
+from typing import Dict, List
 import google.generativeai as genai
 import os 
 from django.conf import settings

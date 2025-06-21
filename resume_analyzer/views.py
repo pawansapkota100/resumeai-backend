@@ -10,7 +10,7 @@ import os
 from django.conf import settings
 from resume_analyzer.models import ResumeAnalysis
 from .utils import calculate_file_hash
-import json
+
 
 # def get_pretty_json(data):
 #     try:

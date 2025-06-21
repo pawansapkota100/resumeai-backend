@@ -4,7 +4,7 @@ import fitz
 import google.generativeai as genai
 import json
 import re
-from datetime import datetime
+
 
 class ResumeParser:
     def __init__(self, api_key: str, model_name: str = "gemini-2.0-flash-exp"):
