@@ -687,7 +687,82 @@ class GenAIVisualAnalyzer:
             return json.loads(cleaned_text)  # Parse JSON string to Python dict
         except json.JSONDecodeError:
             return {"error": "Invalid JSON returned by the model", "raw_output": text}
-    
+
+    def generate_cover_letter(self, data):
+        prompt = f"""
+            You are a professional cover letter writer. Your task is to create a polished, natural-sounding, and professionally written cover letter based only on the information provided below.
+
+            ### Guidelines:
+
+            - Use a **warm and professional tone** — friendly but not overly casual.
+            - Write in **clear, simple language** — easy to understand, no jargon or complex terms.
+            - Keep the letter concise — **3–4 short paragraphs** max.
+            - The content must be **100% based on the provided data**. Do **not add extra skills** or achievements.
+            - Showcase the applicant's skills that match the job description using **only what is given**.
+            - Emphasize why the applicant is genuinely interested in this **specific role at this company**.
+            - The structure should feel like a real human wrote it — **personal and enthusiastic**, yet professional.
+
+            ---
+
+            ### Information to Use
+
+            **Job Details:**
+
+            - Company: {data.get("company", "")}
+            - Position: {data.get("position", "")}
+            - Job Description: {data.get("job_description", "")}
+
+            **Applicant Information:**
+
+            - Name: {data.get("name", "")}
+            - Email: {data.get("email", "")}
+            - Phone: {data.get("phone", "")}
+            - LinkedIn: {data.get("linkedin", "")}
+            - Portfolio: {data.get("portfolio", "")}
+
+            **Skills & Experience:**
+
+            - Relevant Skills: {data.get("skills", "")}
+
+            ---
+
+            ### Cover Letter Structure
+
+            **Paragraph 1 – Opening:**
+            - Express genuine excitement about the role
+            - Introduce yourself and the position you're applying for
+
+            **Paragraph 2 – Skills and Match:**
+            - Describe how your skills match the job description
+            - Mention specific tasks or tools listed and how you’ve used them
+
+            **Paragraph 3 – Interest and Culture Fit:**
+            - Share why you want to work at the company
+            - Show awareness of what the company does (based on job description)
+
+            **Paragraph 4 – Closing:**
+            - Reaffirm interest in the role
+
+            **Paragraph 5 – your contact information:**
+            - Add a polite thank-you
+            -add contact inforamtion, email ,phone, linkedin with hyperlink
+
+            ---
+
+            ### Output Format
+
+            Please return the completed cover letter in **valid JSON format** as:
+            ```json
+            {{ "cover_letter": "Your letter here with proper formatting and line breaks (\\n)" }}
+            ```
+        """ 
+        result = self.model.generate_content(prompt)
+        text = result.text  # Get plain text response
+        cleaned_text = re.sub(r"^```json\n|```$", "", text.strip())
+        try:
+            return json.loads(cleaned_text)  # Parse JSON string to Python dict
+        except json.JSONDecodeError:
+            return {"error": "Invalid JSON returned by the model", "raw_output": text}    
 
 def annotate_pdf_with_comments(pdf_path, output_path, issues):
     doc = fitz.open(pdf_path)

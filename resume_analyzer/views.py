@@ -2,7 +2,7 @@ from rest_framework.views import APIView
 from rest_framework.parsers import MultiPartParser
 from rest_framework import permissions
 from drf_yasg.utils import swagger_auto_schema
-from .serializers import ResumeAnalysisSerializer, ResumeScreeningSerializer
+from .serializers import CoverLetterSerializer, ResumeAnalysisSerializer, ResumeScreeningSerializer
 from .logic import analyze_resume_with_genai
 from core.utils import success_response, error_response
 import tempfile
@@ -145,5 +145,21 @@ class ResumeScreeningAPIView(APIView):
             resume_text=resume_text,
             job_description=serializer.validated_data["job_description"],
         )
+
+        return success_response(data=response, status_code=status.HTTP_200_OK)
+
+class CoverletterGenerator(APIView):
+    serializer_class = CoverLetterSerializer
+    permission_classes = [permissions.IsAuthenticated]
+    api_credit_cost = os.getenv("API_COST")
+
+    @swagger_auto_schema(request_body=CoverLetterSerializer)
+    def post(self, request, *args, **kwargs):
+        serializer = self.serializer_class(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        data = serializer.validated_data
+        api_key = os.getenv("GENAI_API_KEY")
+        analyzer = GenAIVisualAnalyzer(api_key)
+        response = analyzer.generate_cover_letter(data=data)
 
         return success_response(data=response, status_code=status.HTTP_200_OK)
