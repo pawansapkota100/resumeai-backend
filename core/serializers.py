@@ -1,6 +1,10 @@
+from turtle import mode
+from typing import Required
+from attr import fields
+from pkg_resources import require
 from rest_framework import serializers
 from django.contrib.auth import get_user_model
-from .models import UserProfile, ResumeAnalysis
+from .models import BillingRecord, UserProfile, ResumeAnalysis
 
 User = get_user_model()
 
@@ -60,3 +64,50 @@ class UserProfileSerializer(serializers.ModelSerializer):
 #         model = ResumeAnalysis
 #         fields = ('id', 'user', 'resume_file', 'analysis_result', 'created_at', 'updated_at')
 #         read_only_fields = ('id', 'created_at', 'updated_at') 
+
+class UserProfileUpdateSerializer(serializers.ModelSerializer):
+    first_name = serializers.CharField(source='user.first_name', required=False)
+    last_name = serializers.CharField(source='user.last_name', required=False)
+    email= serializers.EmailField(source='user.email', read_only=True)
+    class Meta:
+        model = UserProfile
+        fields= ['bio', 'location','first_name', 'last_name','email']
+
+    def update(self, instance, validated_data):
+        user_data= validated_data.pop('user', {})
+
+        for attrs,item in validated_data.items():
+            setattr(instance, attrs, item)
+        
+        for attrs, item in user_data.items():
+            setattr(instance.user, attrs, item)
+        
+        instance.user.save()
+        instance.save()
+        return instance
+        
+class PasswordChangeSerializer(serializers.Serializer):
+    old_password = serializers.CharField(required=True)
+    new_password = serializers.CharField(required=True)
+    confirm_password = serializers.CharField(required=True)
+
+    def validate(self, attrs):
+        if attrs['new_password'] != attrs['confirm_password']:
+            raise serializers.ValidationError({"password": "Password fields didn't match."})
+        return attrs
+
+    def validate_old_password(self, old_password):
+        user = self.context['request'].user
+        if not user.check_password(old_password):
+            raise serializers.ValidationError("Old password is incorrect")
+        return old_password
+
+class BillingSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = BillingRecord
+        fields = ('id','amount','payment_status','payment_method','billing_date')
+
+class ProfileNotificationSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = UserProfile
+        fields = ('email_notification', 'job_match_notification', 'resume_improvement_notification')

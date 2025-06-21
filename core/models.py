@@ -39,10 +39,34 @@ class UserProfile(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     credit_available=models.IntegerField(default=50)
-
+    email_notification=models.BooleanField(default=True)
+    job_match_notification= models.BooleanField(default=False)
+    resume_improvement_notification= models.BooleanField(default=True)
 
     def __str__(self):
         return f"{self.user.email}'s profile"
+
+class BillingRecord(models.Model):
+    user = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name='billing_records')
+    amount = models.DecimalField(max_digits=10, decimal_places=2)
+    currency = models.CharField(max_length=10, default='USD')  # or use a choices field
+    payment_status = models.CharField(
+        max_length=20,
+        choices=[('pending', 'Pending'), ('paid', 'Paid'), ('failed', 'Failed')],
+        default='pending'
+    )
+    payment_method = models.CharField(
+        max_length=50,
+        null=True, blank=True
+    )
+    billing_date = models.DateTimeField(auto_now_add=True)
+    reference_number = models.CharField(max_length=100, blank=True, null=True)
+
+    def __str__(self):
+        return f" {self.user}"
+
+    class Meta:
+        ordering = ['-billing_date']
 
 class ResumeAnalysis(models.Model):
     user = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name='resume_analyses')

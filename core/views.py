@@ -1,11 +1,17 @@
+from black import Mode
 from django.shortcuts import render
+from httpx import patch
 from rest_framework import generics, permissions, status
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from django.shortcuts import get_object_or_404
 from django.contrib.auth import get_user_model
-from .models import UserProfile, ResumeAnalysis
-from .serializers import UserProfileSerializer, UserRegistrationSerializer, UserSerializer
+from sympy import true
+from yaml import serialize
+
+from job_search import serializer
+from .models import BillingRecord, UserProfile, ResumeAnalysis
+from .serializers import BillingSerializer, PasswordChangeSerializer, ProfileNotificationSerializer, UserProfileSerializer, UserProfileUpdateSerializer, UserRegistrationSerializer, UserSerializer
 from firebase_admin import credentials, auth, firestore
 import firebase_admin
 import firebase_admin.exceptions
@@ -124,3 +130,76 @@ class FirebaseAuthView(APIView):
             return Response({"error": "Invalid Firebase token"}, status=status.HTTP_400_BAD_REQUEST)
         except Exception as e:
             return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+    
+from rest_framework.viewsets import ModelViewSet
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.exceptions import NotFound
+from rest_framework.decorators import action
+from drf_yasg.utils import swagger_auto_schema
+
+
+class UserProfileViewset(ModelViewSet):
+    serializer_class = UserProfileUpdateSerializer
+    permission_classes = [IsAuthenticated]
+    http_method_names = ['get', 'patch']
+
+    def get_object(self):
+        try:
+            return UserProfile.objects.get(user=self.request.user)
+        except UserProfile.DoesNotExist:
+            raise NotFound("User profile does not exist.")
+
+    def get_queryset(self):
+        # Never expose all profiles — just the logged-in user's
+        return UserProfile.objects.filter(user=self.request.user)
+
+    def retrieve(self, request, *args, **kwargs):
+        instance = self.get_object()
+        serializer = self.get_serializer(instance)
+        return success_response(serializer.data)  # Or just Response(serializer.data)
+
+    
+    def partial_update(self, request, *args, **kwargs):
+        instance = self.get_object()
+        serializer = self.get_serializer(instance, data=request.data, partial=True)
+        serializer.is_valid(raise_exception=True)
+        self.perform_update(serializer)
+        return Response(serializer.data)
+
+class ChangePaswwordView(APIView):
+    serializer_class = PasswordChangeSerializer
+    @swagger_auto_schema(request_body=PasswordChangeSerializer)
+    def patch(self, request):
+        user = request.user
+        serializer= PasswordChangeSerializer(data=request.data,context={'request':request})
+        serializer.is_valid(raise_exception=True)
+        user.set_password(serializer.validated_data['new_password'])
+        user.save()
+        return success_response(message='Password changed successfully.', status_code=status.HTTP_200_OK)
+    
+
+class BillingDetailsView(APIView):
+    permission_classes = [IsAuthenticated]
+    serializer_class = BillingSerializer
+    def get(self, request):
+        user = request.user
+        billing_details = BillingRecord.objects.filter(user=user)
+        serializer = BillingSerializer(billing_details, many=True)
+        return success_response(data=serializer.data)
+
+class ProfileNotificationView(APIView):
+    permission_classes = [IsAuthenticated]
+    def get(self, request):
+        user = request.user
+        profile = UserProfile.objects.get(user=user)
+        serializer = ProfileNotificationSerializer(profile)
+        return success_response(data=serializer.data)
+    
+    @swagger_auto_schema(request_body=ProfileNotificationSerializer)
+    def patch(self, request):
+        user = request.user
+        profile = UserProfile.objects.get(user=user)
+        serializer = ProfileNotificationSerializer(profile, data=request.data, partial=True)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return success_response(data=serializer.data)

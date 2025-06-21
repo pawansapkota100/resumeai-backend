@@ -6,3 +6,4 @@ from .models import *
 admin.site.register(CustomUser)
 admin.site.register(UserProfile)
 admin.site.register(ResumeAnalysis)
+admin.site.register(BillingRecord)
