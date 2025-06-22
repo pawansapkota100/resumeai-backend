@@ -1,3 +1,4 @@
+from resumeai.permissions import CreditCheckPermission
 from rest_framework.views import APIView
 from rest_framework.parsers import MultiPartParser
 from rest_framework import permissions
@@ -158,7 +159,6 @@ class ResumeScreeningAPIView(APIView):
         dashboard.save()
 
         return success_response(data=response, status_code=status.HTTP_200_OK)
-from resumeai.permissions import CreditCheckPermission
 class CoverletterGenerator(APIView):
     serializer_class = CoverLetterSerializer
     permission_classes = [permissions.IsAuthenticated,CreditCheckPermission]

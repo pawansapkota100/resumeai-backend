@@ -6,6 +6,8 @@ import json
 from rolesuggestion.utils import with_temp_file
 from resume_analyzer.logic import GenAIVisualAnalyzer
 import os
+from resumeai.permissions import CreditCheckPermission
+from rest_framework import permissions
 from core.utils import success_response
 analyser=GenAIVisualAnalyzer(api_key=os.getenv('GENAI_API_KEY'))
 class ScrapeJobViewset(viewsets.ModelViewSet):
@@ -13,6 +15,7 @@ class ScrapeJobViewset(viewsets.ModelViewSet):
     serializer_class=JobSerchingSerializer
     http_method_names = ['post']
     api_credit_cost= os.getenv('API_COST')
+    permission_classes = [permissions.IsAuthenticated,CreditCheckPermission]
 
     def create(self, request, *args, **kwargs):
         serializer=self.get_serializer(data=request.data)
