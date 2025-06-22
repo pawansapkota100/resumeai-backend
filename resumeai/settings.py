@@ -56,10 +56,10 @@ INSTALLED_APPS = [
     'resume_analyzer',
     'job_search',
     'rolesuggestion',
+    'blog',
 ]
 
 MIDDLEWARE = [
-    'resumeai.middleware.CreditCheckMiddleware',
     'whitenoise.middleware.WhiteNoiseMiddleware',
     'corsheaders.middleware.CorsMiddleware',
     'django.middleware.security.SecurityMiddleware',
@@ -67,6 +67,7 @@ MIDDLEWARE = [
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
+    # 'resumeai.middleware.CreditCheckMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]

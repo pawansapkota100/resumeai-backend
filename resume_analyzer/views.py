@@ -50,8 +50,8 @@ class ResumeAnalysisView(APIView):
                 "reused": True,
             }
         else:
-            self.api_credit_cost = os.getenv("API_COST")
-            if request.user.profile.credit_available < self.api_credit_cost:
+            self.api_credit_cost = int(os.getenv("API_COST"))
+            if int(request.user.profile.credit_available) < int(self.api_credit_cost):
                 return error_response(
                     message={
                         "error": "You don't have enough credits to perform this action."
@@ -85,10 +85,12 @@ class ResumeAnalysisView(APIView):
                     profile = request.user.profile
                     profile.refresh_from_db()
                     cost = getattr(self, "api_credit_cost", 10)
-                    profile.credit_available -= cost
+                    credit = int(profile.credit_available)
+                    credit -= int(cost)
+                    profile.credit_available = credit
                     profile.save()
-                    dashboard=Dashboard.objects.get(user=request.user).total_resume_analysis
-                    dashboard+=1
+                    dashboard = Dashboard.objects.get(user=request.user)
+                    dashboard.total_resume_analysis += 1
                     dashboard.save()
 
                     
@@ -107,8 +109,8 @@ from drf_yasg.utils import swagger_auto_schema
 
 class ResumeScreeningAPIView(APIView):
     parser_classes = [MultiPartParser]
-    permission_classes = [permissions.IsAuthenticated]
-    api_credit_cost = os.getenv("API_COST")
+    permission_classes = [permissions.IsAuthenticated,CreditCheckPermission]
+    api_credit_cost = int(os.getenv("API_COST"))
 
     @swagger_auto_schema(request_body=ResumeScreeningSerializer)
     def post(self, request, *args, **kwargs):
@@ -151,16 +153,17 @@ class ResumeScreeningAPIView(APIView):
             resume_text=resume_text,
             job_description=serializer.validated_data["job_description"],
         )
-        dashboard=Dashboard.objects.get(user=request.user).total_job_matches
-        dashboard+=1
+        dashboard = Dashboard.objects.get(user=request.user)
+        dashboard.total_job_matches+= 1
         dashboard.save()
 
         return success_response(data=response, status_code=status.HTTP_200_OK)
-
+from resumeai.permissions import CreditCheckPermission
 class CoverletterGenerator(APIView):
     serializer_class = CoverLetterSerializer
-    permission_classes = [permissions.IsAuthenticated]
-    api_credit_cost = os.getenv("API_COST")
+    permission_classes = [permissions.IsAuthenticated,CreditCheckPermission]
+    api_credit_cost = int(os.getenv("API_COST"))
+    
 
     @swagger_auto_schema(request_body=CoverLetterSerializer)
     def post(self, request, *args, **kwargs):
@@ -170,8 +173,8 @@ class CoverletterGenerator(APIView):
         api_key = os.getenv("GENAI_API_KEY")
         analyzer = GenAIVisualAnalyzer(api_key)
         response = analyzer.generate_cover_letter(data=data)
-        dashboard=Dashboard.objects.get(user=request.user).total_cover_letters
-        dashboard+=1
+        dashboard = Dashboard.objects.get(user=request.user)
+        dashboard.total_cover_letters += 1
         dashboard.save()
 
         return success_response(data=response, status_code=status.HTTP_200_OK)
