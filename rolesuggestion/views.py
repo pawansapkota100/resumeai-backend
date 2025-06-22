@@ -23,6 +23,10 @@ class roleSuggestionView(viewsets.ModelViewSet):
         with with_temp_file(serializer.validated_data['resume']) as temp_path:
             extracted_text = analyser.extract_text_from_pdf(temp_path)
             result = analyzer.analyze_resume(extracted_text)
+        dashboard=Dashboard.objects.get(user=request.user).total_cover_letters
+        dashboard+=1
+        dashboard.save()
+
         return success_response(data=result)
 
 

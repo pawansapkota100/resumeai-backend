@@ -19,7 +19,7 @@ from .utils import calculate_file_hash
 #     except json.JSONDecodeError:
 #         return None
 from django.db import transaction
-
+from core.models import Dashboard
 
 class ResumeAnalysisView(APIView):
     serializer_class = ResumeAnalysisSerializer
@@ -87,6 +87,12 @@ class ResumeAnalysisView(APIView):
                     cost = getattr(self, "api_credit_cost", 10)
                     profile.credit_available -= cost
                     profile.save()
+                    dashboard=Dashboard.objects.get(user=request.user).total_resume_analysis
+                    dashboard+=1
+                    dashboard.save()
+
+                    
+                    
 
             finally:
                 os.remove(temp_file_path)
@@ -145,6 +151,9 @@ class ResumeScreeningAPIView(APIView):
             resume_text=resume_text,
             job_description=serializer.validated_data["job_description"],
         )
+        dashboard=Dashboard.objects.get(user=request.user).total_job_matches
+        dashboard+=1
+        dashboard.save()
 
         return success_response(data=response, status_code=status.HTTP_200_OK)
 
@@ -161,5 +170,8 @@ class CoverletterGenerator(APIView):
         api_key = os.getenv("GENAI_API_KEY")
         analyzer = GenAIVisualAnalyzer(api_key)
         response = analyzer.generate_cover_letter(data=data)
+        dashboard=Dashboard.objects.get(user=request.user).total_cover_letters
+        dashboard+=1
+        dashboard.save()
 
         return success_response(data=response, status_code=status.HTTP_200_OK)
