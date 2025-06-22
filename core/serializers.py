@@ -1,7 +1,8 @@
+
 from rest_framework import serializers
 from django.contrib.auth import get_user_model
-from .models import BillingRecord, UserProfile
-
+from .models import BillingRecord, Dashboard, Notification, UserProfile, UserResume
+import os
 User = get_user_model()
 
 class UserRegistrationSerializer(serializers.ModelSerializer):
@@ -107,3 +108,24 @@ class ProfileNotificationSerializer(serializers.ModelSerializer):
     class Meta:
         model = UserProfile
         fields = ('email_notification', 'job_match_notification', 'resume_improvement_notification')
+    
+class DashboardSerializer(serializers.ModelSerializer):
+    credit_available= serializers.IntegerField(source='user.profile.credit_available', read_only=True)
+    class Meta:
+        model = Dashboard
+        fields='__all__'
+
+class NotificationSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Notification
+        fields='__all__'
+
+class UserResumeSerializer(serializers.ModelSerializer):
+    file_name= serializers.SerializerMethodField(read_only=True)
+    created_at= serializers.DateTimeField(read_only=True)
+    class Meta:
+        model = UserResume
+        fields = ('id', 'resume_file', 'created_at','file_name')
+    
+    def get_file_name(self, obj):
+        return os.path.basename(obj.resume_file.name)

@@ -46,6 +46,22 @@ class UserProfile(models.Model):
     def __str__(self):
         return f"{self.user.email}'s profile"
 
+class Dashboard(models.Model):
+    user = models.OneToOneField(CustomUser, on_delete=models.CASCADE, related_name='dashboard')
+    total_resume_analysis= models.IntegerField(default=0)
+    total_job_matches= models.IntegerField(default=0)
+    total_cover_letters= models.IntegerField(default=0)
+    total_role_suggestions= models.IntegerField(default=0)
+    
+class Notification(models.Model):
+    user = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name='notifications',null=True, blank=True)
+    message = models.CharField()
+    description= models.TextField()
+    category = models.CharField(max_length=100)
+    is_general= models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+
 class BillingRecord(models.Model):
     user = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name='billing_records')
     amount = models.DecimalField(max_digits=10, decimal_places=2)
@@ -80,3 +96,12 @@ class ResumeAnalysis(models.Model):
 
     def __str__(self):
         return f"Analysis for {self.user.email} - {self.created_at}"
+
+class UserResume(models.Model):
+    user = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name='resumes')
+    resume_file = models.FileField(upload_to='user-resumes/')
+    created_at = models.DateTimeField(auto_now_add=True)
+    deleted_at= models.DateTimeField(null=True, blank=True)
+
+    def __str__(self):
+        return f"Resume for {self.user.email} - {self.created_at}"

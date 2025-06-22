@@ -5,8 +5,9 @@ from rest_framework.views import APIView
 from django.contrib.auth import get_user_model
 
 
-from .models import BillingRecord, UserProfile
-from .serializers import BillingSerializer, PasswordChangeSerializer, ProfileNotificationSerializer, UserProfileUpdateSerializer, UserRegistrationSerializer, UserSerializer
+
+from .models import BillingRecord, Dashboard, Notification, UserProfile, UserResume
+from .serializers import BillingSerializer, DashboardSerializer, NotificationSerializer, PasswordChangeSerializer, ProfileNotificationSerializer, UserProfileUpdateSerializer, UserRegistrationSerializer, UserResumeSerializer, UserSerializer
 from firebase_admin import credentials, auth
 import firebase_admin
 import firebase_admin.exceptions
@@ -103,7 +104,9 @@ class FirebaseAuthView(APIView):
 
             if created:
                 # Optionally, populate the user fields from Firebase data
-                user.first_name = decoded_token.get('name', '')
+                name=decoded_token.get('name')
+                user.first_name = name.split()[0] if name else ''
+                user.last_name = ' '.join(name.split()[1:]) if len(name.split()) > 1 else ''
                 user.email = decoded_token.get('email', '')
                 user.is_active=True
                 user.is_social_login=True
@@ -111,6 +114,7 @@ class FirebaseAuthView(APIView):
                 user.save()
 
                 UserProfile.objects.create(user=user, bio='', location='', image='',created_at=datetime.now(),updated_at=datetime.now())
+                Dashboard.objects.create(user=user)
 
             if user.is_social_login != True:
                 return error_response(message="You already have account from this email")
@@ -204,3 +208,52 @@ class IsSocialLogin(APIView):
     def get(self, request):
         user = request.user
         return success_response(data=user.is_social_login)
+
+from django.db.models import Q
+class NotificationView(APIView):
+    permission_classes = [IsAuthenticated]
+    def get(self, request):
+        user = request.user
+        notifications= Notification.objects.filter(Q(is_general=True) | Q(user=user)).order_by('-created_at')
+        serializer = NotificationSerializer(notifications, many=True)
+        return success_response(data=serializer.data)
+
+class DashboardView(APIView):
+    permission_classes = [IsAuthenticated]
+    def get(self, request):
+        user = request.user
+        dashboard = Dashboard.objects.filter(user=user)
+        serializer = DashboardSerializer(dashboard,many=True)
+        return success_response(data=serializer.data)
+    
+from rest_framework.parsers import MultiPartParser
+
+class UserResumeview(ModelViewSet):
+    permission_classes = [IsAuthenticated]
+    parser_classes=[MultiPartParser]
+    http_method_names=['get', 'post', 'delete']
+    serializer_class = UserResumeSerializer
+    
+    def get_queryset(self):
+        user = self.request.user
+        resumes = UserResume.objects.filter(user=user,deleted_at__isnull=True)
+        return resumes
+    
+    @swagger_auto_schema(request_body=UserResumeSerializer)
+    def create(self, request):
+        user = request.user
+        serializer = UserResumeSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        serializer.save(user=user)
+        return success_response(data=serializer.data)
+    
+    def destroy(self, request, pk=None):
+        user = request.user
+        try:
+            resume = UserResume.objects.get(id=pk, user=user)
+        except UserResume.DoesNotExist:
+            raise NotFound("Resume not found.")
+        
+        resume.deleted_at = datetime.now()
+        resume.save()
+        return success_response(data={"message": "Resume deleted successfully."})
