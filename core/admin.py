@@ -9,3 +9,4 @@ admin.site.register(ResumeAnalysis)
 admin.site.register(BillingRecord)
 admin.site.register(Dashboard)
 admin.site.register(Notification)
+

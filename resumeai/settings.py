@@ -57,6 +57,9 @@ INSTALLED_APPS = [
     'job_search',
     'rolesuggestion',
     'blog',
+    'ckeditor',
+    'ckeditor_uploader',
+
 ]
 
 MIDDLEWARE = [
@@ -257,3 +260,22 @@ CSRF_TRUSTED_ORIGINS = [
     'http://localhost:3000',
     'http://127.0.0.1:3000',
 ]
+
+
+# CKEditor Configuration
+CKEDITOR_UPLOAD_PATH = "blog/image/"
+CKEDITOR_RESTRICT_BY_USER = False
+CKEDITOR_REQUIRE_STAFF = False
+CKEDITOR_ALLOW_NONIMAGE_FILES = False
+
+CKEDITOR_CONFIGS = {
+    'default': {
+        'toolbar': 'full',
+        'uploadUrl': '/ckeditor/upload/',
+        'filebrowserUploadUrl': '/ckeditor/upload/',
+        'imageUploadUrl': '/ckeditor/upload/',
+        'startupFocus': True,
+        'height': 300,
+        'width': "100%",
+    },
+}

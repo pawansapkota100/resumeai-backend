@@ -47,8 +47,10 @@ urlpatterns += [
     path('api/v1/', include('rolesuggestion.urls')),
     path('api/v1/',include('job_search.urls')),
     path('accounts/login/', auth_views.LoginView.as_view(), name='login'),
-    
+    path('api/v1/', include('blog.urls')),
     path('redoc/', schema_view.with_ui('redoc', cache_timeout=0), name='schema-redoc'),
+    path('ckeditor/', include('ckeditor_uploader.urls')),
+
 ]
 
 if settings.DEBUG:
