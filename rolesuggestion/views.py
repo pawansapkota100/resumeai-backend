@@ -8,6 +8,7 @@ from .suggestion import ResumeRoleAnalyzer
 from .utils import with_temp_file
 from rest_framework import permissions
 from resumeai.permissions import CreditCheckPermission
+from core.models import Dashboard
 api_key=os.getenv('GENAI_API_KEY')
 
 analyser=GenAIVisualAnalyzer(api_key='d')
