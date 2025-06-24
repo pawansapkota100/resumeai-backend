@@ -36,6 +36,7 @@ ALLOWED_HOSTS = ['*']  # Configure this appropriately in production
 # Application definition
 
 INSTALLED_APPS = [
+    'jazzmin',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -47,8 +48,6 @@ INSTALLED_APPS = [
     'rest_framework',
     'corsheaders',
     'drf_yasg',
-    'cloudinary',
-    'cloudinary_storage',
     'storages',
     
     # Local apps
@@ -60,7 +59,43 @@ INSTALLED_APPS = [
     'ckeditor',
     'ckeditor_uploader',
 
+
 ]
+
+JAZZMIN_SETTINGS = {
+    "site_title": "My Blog Admin",
+    "site_header": "My Blog Dashboard",
+    "site_brand": "MyBlog",
+    "welcome_sign": "Welcome to MyBlog Admin",
+    "copyright": "MyBlog",
+    "show_sidebar": True,
+    "navigation_expanded": True,
+
+    "topmenu_links": [
+        {"name": "Home", "url": "admin:index", "permissions": ["auth.view_user"]},
+        {"model": "auth.User"},
+        {"app": "blog"},  # your app name
+    ],
+
+    "user_avatar": None,
+
+    "icons": {
+        "auth": "fas fa-users-cog",
+        "auth.user": "fas fa-user",
+        "auth.Group": "fas fa-users",
+        "blog.blog": "fas fa-blog",
+        "blog.blogcategories": "fas fa-folder",
+    },
+
+    "default_icon_parents": "fas fa-chevron-circle-right",
+    "default_icon_children": "fas fa-circle",
+
+    "show_ui_builder": True,
+    "changeform_format": "collapsible",  # options: horizontal_tabs, vertical_tabs, collapsible, single
+
+    # Theme customization
+    "theme": "darkly",  # Other options: flatly, lumen, cerulean, cosmo, etc.
+}
 
 MIDDLEWARE = [
     'whitenoise.middleware.WhiteNoiseMiddleware',

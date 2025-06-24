@@ -1,7 +1,7 @@
 
 from rest_framework import serializers
 from django.contrib.auth import get_user_model
-from .models import BillingRecord, Dashboard, Notification, UserProfile, UserResume
+from .models import BillingRecord, Dashboard, Notification, UserProfile, UserResume,SaveResult
 import os
 User = get_user_model()
 
@@ -129,3 +129,30 @@ class UserResumeSerializer(serializers.ModelSerializer):
     
     def get_file_name(self, obj):
         return os.path.basename(obj.resume_file.name)
+    
+class SavedResumeSerializer(serializers.ModelSerializer):
+    user= serializers.PrimaryKeyRelatedField(default=serializers.CurrentUserDefault(),read_only=True)
+    class Meta:
+        model = SaveResult
+        fields='__all__'
+        read_only_fields = ['created_at']
+    
+    def to_representation(self, instance):
+        """
+        Customize fields returned based on action (list/retrieve).
+        """
+        rep = super().to_representation(instance)
+        request = self.context.get("request", None)
+
+        # Determine view action
+        if request and hasattr(self.context.get("view"), "action"):
+            action = self.context["view"].action
+            if action == "list":
+                # Only include specific fields for list view
+                return {
+                    "id": rep.get("id"),
+                    "title": rep.get("title"),
+                    "feature_type": rep.get("feature_type"),
+                    "created_at": rep.get("created_at"),
+                }
+        return rep

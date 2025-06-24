@@ -6,8 +6,8 @@ from django.contrib.auth import get_user_model
 
 
 
-from .models import BillingRecord, Dashboard, Notification, UserProfile, UserResume
-from .serializers import BillingSerializer, DashboardSerializer, NotificationSerializer, PasswordChangeSerializer, ProfileNotificationSerializer, UserProfileUpdateSerializer, UserRegistrationSerializer, UserResumeSerializer, UserSerializer
+from .models import BillingRecord, Dashboard, Notification, UserProfile, UserResume,SaveResult
+from .serializers import BillingSerializer, DashboardSerializer, NotificationSerializer, PasswordChangeSerializer, ProfileNotificationSerializer, UserProfileUpdateSerializer, UserRegistrationSerializer, UserResumeSerializer, UserSerializer,SavedResumeSerializer
 from firebase_admin import credentials, auth
 import firebase_admin
 import firebase_admin.exceptions
@@ -252,6 +252,31 @@ class UserResumeview(ModelViewSet):
         try:
             resume = UserResume.objects.get(id=pk, user=user)
         except UserResume.DoesNotExist:
+            raise NotFound("Resume not found.")
+        
+        resume.deleted_at = datetime.now()
+        resume.save()
+        return success_response(data={"message": "Resume deleted successfully."})
+    
+
+class SavedResultViewset(ModelViewSet):
+    serializer_class = SavedResumeSerializer
+    permission_classes = [IsAuthenticated]
+    http_method_names = ['get', 'post', 'delete']
+    parser_classes = [MultiPartParser]
+
+    def get_queryset(self):
+        user = self.request.user
+        saved_results = SaveResult.objects.filter(user=user,deleted_at__isnull=True)
+        return saved_results
+    def perform_create(self, serializer):
+        serializer.save(user=self.request.user)
+
+    def destroy(self, request, pk=None):
+        user = request.user
+        try:
+            resume = SaveResult.objects.get(id=pk, user=user)
+        except SaveResult.DoesNotExist:
             raise NotFound("Resume not found.")
         
         resume.deleted_at = datetime.now()

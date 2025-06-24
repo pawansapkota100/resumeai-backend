@@ -7,6 +7,7 @@ from rest_framework.routers import DefaultRouter
 router=DefaultRouter()
 router.register(r'update-profile', views.UserProfileViewset, basename='profile')
 router.register(r'upload-resume', views.UserResumeview, basename='upload-resume')
+router.register(r'save-result', views.SavedResultViewset, basename='save-resume')
 urlpatterns = [
     # Authentication endpoints
     path('auth/register/', views.UserRegistrationView.as_view(), name='register'),
@@ -24,5 +25,6 @@ urlpatterns = [
     path('is-social-login/', views.IsSocialLogin.as_view(), name='is-social-login'),
     path('dashboard-data/', views.DashboardView.as_view(), name='dashboard-data'),
     path('notification-data/', views.NotificationView.as_view(), name='notification-data'),
+    
 
 ] 

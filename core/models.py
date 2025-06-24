@@ -2,6 +2,8 @@ from django.db import models
 from django.contrib.auth.models import AbstractUser, BaseUserManager
 from django.utils.translation import gettext_lazy as _
 
+
+
 class CustomUserManager(BaseUserManager):
     def create_user(self, email, password=None, **extra_fields):
         if not email:
@@ -105,3 +107,32 @@ class UserResume(models.Model):
 
     def __str__(self):
         return f"Resume for {self.user.email} - {self.created_at}"
+
+
+class SaveResult(models.Model):
+    FEATURE_CHOICES = [
+        ('resume_analysis', 'Resume Analysis'),
+        ('job_match', 'Job Match'),
+        ('role_suggestion', 'Role Suggestion'),
+        ('cover_letter', 'Cover Letter Generator'),
+    ]
+    title= models.CharField(max_length=255)
+    user = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name='genai_requests')
+    feature_type = models.CharField(max_length=50, choices=FEATURE_CHOICES)
+    created_at = models.DateTimeField(auto_now_add=True)
+    deleted_at= models.DateTimeField(null=True, blank=True)
+
+    # Store uploaded file (if any, like resume)
+    resume = models.FileField(upload_to='uploads/resumes/', null=True, blank=True)
+
+    # Optional: job description for job match
+    job_description = models.TextField(null=True, blank=True)
+
+    # Optional: form input for cover letter
+    cover_letter_fields = models.JSONField(null=True, blank=True)
+
+    # Output from the AI (stored as JSON)
+    result = models.JSONField()
+
+    def __str__(self):
+        return f"{self.user.email} - {self.feature_type} @ {self.created_at}"
