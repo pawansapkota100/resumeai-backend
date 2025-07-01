@@ -58,7 +58,7 @@ INSTALLED_APPS = [
     'blog',
     'ckeditor',
     'ckeditor_uploader',
-
+    'payment',
 
 ]
 
@@ -314,3 +314,6 @@ CKEDITOR_CONFIGS = {
         'width': "100%",
     },
 }
+
+
+STRIPE_SECRET_KEY = os.getenv('STRIPE_SECRET_KEY')

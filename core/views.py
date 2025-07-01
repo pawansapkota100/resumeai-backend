@@ -3,7 +3,8 @@ from rest_framework import generics, permissions, status
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from django.contrib.auth import get_user_model
-
+from django.utils.decorators import method_decorator
+from django.views.decorators.csrf import csrf_exempt
 
 
 from .models import BillingRecord, Dashboard, Notification, UserProfile, UserResume,SaveResult
@@ -46,20 +47,22 @@ class ResumeSuggestionsView(APIView):
         return Response(suggestions)
 
 
+@method_decorator(csrf_exempt, name='dispatch')
 class UserRegistrationView(generics.CreateAPIView):
     queryset = User.objects.all()
-    permission_classes = (permissions.AllowAny,)
     serializer_class = UserRegistrationSerializer
+    permission_classes = (permissions.AllowAny,)
 
     def post(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
         if serializer.is_valid():
             user = serializer.save()
             return success_response(
-                data= UserSerializer(user, context=self.get_serializer_context()).data,
-                message= "User Created Successfully", status_code=status.HTTP_201_CREATED)
+                data=UserSerializer(user, context=self.get_serializer_context()).data,
+                message="User Created Successfully",
+                status_code=status.HTTP_201_CREATED
+            )
         return error_response(message=serializer.errors, status_code=status.HTTP_400_BAD_REQUEST)
-
 
 
 def generate_jwt(user):
