@@ -3,6 +3,7 @@ from rest_framework import serializers
 from django.contrib.auth import get_user_model
 from .models import BillingRecord, Dashboard, Notification, UserProfile, UserResume,SaveResult
 import os
+from payment.models import CreditPurchaseOrder
 User = get_user_model()
 
 class UserRegistrationSerializer(serializers.ModelSerializer):
@@ -100,9 +101,11 @@ class PasswordChangeSerializer(serializers.Serializer):
         return old_password
 
 class BillingSerializer(serializers.ModelSerializer):
+    product_name = serializers.ReadOnlyField(source='product.name')
     class Meta:
-        model = BillingRecord
-        fields = ('id','amount','payment_status','payment_method','billing_date')
+        model = CreditPurchaseOrder
+        fields = ['id','product_name','credit_amount','price','status','currency','created_at']
+        ordering = ['-created_at']
 
 class ProfileNotificationSerializer(serializers.ModelSerializer):
     class Meta:

@@ -5,6 +5,7 @@ from rest_framework.views import APIView
 from django.contrib.auth import get_user_model
 from django.utils.decorators import method_decorator
 from django.views.decorators.csrf import csrf_exempt
+from payment.models import CreditPurchaseOrder
 
 
 from .models import BillingRecord, Dashboard, Notification, UserProfile, UserResume,SaveResult
@@ -179,13 +180,12 @@ class ChangePaswwordView(APIView):
         user.save()
         return success_response(message='Password changed successfully.', status_code=status.HTTP_200_OK)
     
-
 class BillingDetailsView(APIView):
     permission_classes = [IsAuthenticated]
     serializer_class = BillingSerializer
     def get(self, request):
         user = request.user
-        billing_details = BillingRecord.objects.filter(user=user)
+        billing_details = CreditPurchaseOrder.objects.filter(user=user)
         serializer = BillingSerializer(billing_details, many=True)
         return success_response(data=serializer.data)
 
