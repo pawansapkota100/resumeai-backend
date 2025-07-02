@@ -743,9 +743,10 @@ class GenAIVisualAnalyzer:
             **Paragraph 4 – Closing:**
             - Reaffirm interest in the role
 
-            **Paragraph 5 – your contact information:**
-            - Add a polite thank-you
-            -add contact inforamtion, email ,phone, linkedin with hyperlink
+            **Paragraph 5 – Finish with a Closing Line:**
+            - Then include your full name and email the line space should be less then other line space.
+
+
 
             ---
 
