@@ -50,6 +50,7 @@ class GenAIVisualAnalyzer:
         combined_results = self._combine_analyses(
             cv_results, genai_results, design_critique, professional_assessment
         )
+        combined_results['list_of_tasks'] = self.make_task_to_import_resume(combined_results['summary_recommendations'])
         
         return combined_results
     
@@ -473,8 +474,49 @@ class GenAIVisualAnalyzer:
             'summary_recommendations': self._generate_summary_recommendations(
                 genai_results, design_critique, professional_assessment
             )
-        }
-    
+                            }
+    def make_task_to_import_resume(self, summary: str):
+        prompt = f"""
+            You are an HR expert who is tasked with analyzing a resume.
+            I will provide you with a list of recommendations or feedback generated from a resume analysis. Based on these recommendations, generate a clear and actionable list of tasks that the candidate needs to do to improve their resume.
+
+            Requirements:
+            - Break down each recommendation into specific, actionable tasks.
+            - Group the tasks under the most appropriate categories such as "Technical Content", "Visual Design", "Formatting", "ATS Optimization", etc.
+            - Return the response in valid JSON format ONLY.
+            - The format should be:
+
+            {{
+                "Technical Content": [
+                    "task 1",
+                    "task 2"
+                ],
+                "Visual Design": [
+                    "task 3",
+                    "task 4"
+                ]
+            }}
+
+            - Do not repeat the original recommendation text — instead, translate it into actionable items.
+            - Do not add explanations or extra commentary outside the JSON.
+            - Do not include placeholder tasks — use only what is derived directly from the recommendations I provide.
+
+            Here is the list of resume recommendations:
+            {summary}
+            """
+
+        result = self.model.generate_content(prompt)
+        text = result.text.strip()
+        cleaned_text = re.sub(r"^```json\s*|\s*```$", "", text)
+
+        try:
+            return json.loads(cleaned_text)
+        except json.JSONDecodeError:
+            return {"error": "Invalid JSON returned by the model", "raw_output": text}
+
+
+
+
     def _generate_summary_recommendations(self, genai_results: Dict, 
                                         design_critique: Dict, professional_assessment: Dict) -> List[str]:
         """Generate prioritized recommendations"""
