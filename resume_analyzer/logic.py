@@ -630,12 +630,16 @@ class GenAIVisualAnalyzer:
         - Evaluate project complexity and impact
         - Account for career gaps or transitions
         - Match job titles and functions to required experience
+        - Experience level (e.g., Entry-Level, Mid-Level, Senior-Level)
+        - Domain match (is the resume relevant to software engineering domain?)
 
         3. EDUCATION ASSESSMENT:
         - Compare degree requirements vs. candidate's education
         - Consider relevant coursework, certifications, and continuous learning
         - Evaluate if experience can compensate for educational gaps
         - Account for alternative education paths (bootcamps, self-taught, etc.)
+        - Evaluate if education aligns with job requirements
+        - Consider relevant degree levels (e.g., Bachelor's, Master's, Doctorate)
 
         4. SCORING METHODOLOGY:
         Calculate match_score (0-100) based on weighted criteria:
@@ -656,10 +660,18 @@ class GenAIVisualAnalyzer:
         "match_score": <int>,  // 0–100 calculated using weighted methodology above
         "matching_skills": [<string>],  // ONLY skills that exist in BOTH the resume AND job requirements - never list skills not present in resume
         "missing_skills": [<string>],  // ONLY skills required in job description but NOT found in candidate's resume
-        "experience_match": "<brief string>",  // Assess relevance, years, and seniority level alignment
-        "education_match": "<Yes/No/Partial + explanation>",  // Compare degree requirements vs. actual education
+        "experience_match": {{
+            "summary": "<brief string>",  // e.g., "5 years of backend experience, aligned with mid-level roles in software engineering."
+            "experience_level": "<string>",  // e.g., "Mid-Level"
+            "domain_match": "<string>"  // e.g., "Relevant"
+        }},  // Assess relevance, years, and seniority level alignment
+        "education_match": {{
+            "summary": "<Yes/No/Partial + explanation>",
+            "education_aligns": "<string>",  // e.g., "Yes", "No", or "Partial"
+            "relevant_degree": "<string>"  // e.g., "Bachelor of Computer Science"
+        }},
         "summary": "<string>",  // 2-3 sentence objective assessment of candidate's fit
-        "recommendation": "<string: Proceed to interview / Needs review / Not a strong match>"  // Based on scoring logic above
+        "recommendation": "<string>"  // Proceed to interview / Needs review / Not a strong match
         }}
 
         IMPORTANT GUIDELINES:
