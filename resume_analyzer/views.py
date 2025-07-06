@@ -3,7 +3,7 @@ from rest_framework.views import APIView
 from rest_framework.parsers import MultiPartParser
 from rest_framework import permissions
 from drf_yasg.utils import swagger_auto_schema
-from .serializers import CoverLetterSerializer, ResumeAnalysisSerializer, ResumeScreeningSerializer
+from .serializers import CoverLetterSerializer, ResumeAnalysisSerializer, ResumeScreeningSerializer,ResumeGeneratorSerializer
 from .logic import analyze_resume_with_genai
 from core.utils import success_response, error_response
 import tempfile
@@ -178,3 +178,43 @@ class CoverletterGenerator(APIView):
         dashboard.save()
 
         return success_response(data=response, status_code=status.HTTP_200_OK)
+
+class ResumeGenerator(APIView):
+    serializer_class = ResumeGeneratorSerializer
+    permission_classes = [permissions.IsAuthenticated,CreditCheckPermission]
+    api_credit_cost = int(os.getenv("API_COST"))
+    parser_classes=[MultiPartParser]
+    @swagger_auto_schema(request_body=ResumeGeneratorSerializer)
+    def post(self, request, *args, **kwargs):
+        serializer = self.serializer_class(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        data = serializer.validated_data
+
+        api_key = os.getenv("GENAI_API_KEY")
+        analyzer = GenAIVisualAnalyzer(api_key)
+
+        pdf_file = data.get('pdf')  # This is InMemoryUploadedFile
+        tmp_path = None
+
+        try:
+            # Save uploaded file to temporary path
+            with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as tmp:
+                tmp.write(pdf_file.read())
+                tmp_path = tmp.name
+
+            # Pass file path to your existing extract_text_from_pdf method
+            text_from_pdf = analyzer.extract_text_from_pdf(tmp_path)
+
+            # Generate resume JSON
+            response = analyzer.generate_resume_json(
+                text_from_pdf=text_from_pdf,
+                job_description=data.get('job_description'),
+                suggestion=data.get('suggestion')
+            )
+
+            return success_response(data=response, status_code=status.HTTP_200_OK)
+
+        finally:
+            # Always delete the temp file to avoid disk bloat
+            if tmp_path and os.path.exists(tmp_path):
+                os.remove(tmp_path)

@@ -12,7 +12,7 @@ from typing import Dict, List
 import google.generativeai as genai
 import os 
 from django.conf import settings
-
+from datetime import datetime
 
 
 
@@ -742,6 +742,261 @@ class GenAIVisualAnalyzer:
         except json.JSONDecodeError:
             return {"error": "Invalid JSON returned by the model", "raw_output": text}
 
+
+    def generate_resume_json(self, text_from_pdf, job_description=None, suggestion=None):
+        """
+        Generate standardized JSON from resume text with optional job description and suggestions.
+        
+        Args:
+            text_from_pdf (str): Raw text extracted from PDF resume
+            job_description (str, optional): Job description to tailor the resume
+            suggestion (str, optional): Analysis feedback and suggestions
+        
+        Returns:
+            dict: Standardized JSON format or error dict
+        """
+        
+        # Base prompt
+        prompt = f"""
+    You are an expert resume parser and formatter. Your task is to convert extracted resume text into a standardized JSON format that will be used with Handlebars templates to generate professional resumes.
+
+    ## Input Data
+    You will receive:
+    1. **Resume Text**: Raw text extracted from a PDF resume
+    2. **Job Description** (optional): Target job information for customization
+    3. **Analysis Feedback** (optional): Suggestions, corrections, and improvements
+
+    ## Task Requirements
+    Convert the resume text into a structured JSON format while:
+    - Incorporating all suggestions and corrections from the analysis feedback (if provided)
+    - Tailoring content to the job description (if provided)
+    - Fixing identified mistakes and errors
+    - Standardizing the format for consistent template rendering
+    - Ensuring all data is properly categorized and formatted
+
+    ## Required JSON Structure
+    {{
+    "personalInfo": {{
+        "firstName": "string",
+        "lastName": "string",
+        "fullName": "string",
+        "email": "string",
+        "phone": "string",
+        "address": {{
+        "street": "string",
+        "city": "string",
+        "state": "string",
+        "zipCode": "string",
+        "country": "string"
+        }},
+        "linkedin": "string",
+        "github": "string",
+        "website": "string",
+        "portfolio": "string"
+    }},
+    "professionalSummary": {{
+        "summary": "string (2-3 sentences highlighting key qualifications)",
+        "keyStrengths": ["string", "string", "string"]
+    }},
+    "experience": [
+        {{
+        "jobTitle": "string",
+        "company": "string",
+        "location": "string",
+        "startDate": "string (MM/YYYY format)",
+        "endDate": "string (MM/YYYY format or 'Present')",
+        "duration": "string (auto-calculated)",
+        "description": "string (brief company/role context)",
+        "achievements": [
+            "string (quantified achievement with metrics when possible)",
+            "string (action-oriented accomplishment)"
+        ],
+        "technologies": ["string", "string"],
+        "isCurrentRole": true
+        }}
+    ],
+    "education": [
+        {{
+        "degree": "string",
+        "major": "string",
+        "school": "string",
+        "location": "string",
+        "graduationDate": "string (MM/YYYY format)",
+        "gpa": "string (if mentioned and above 3.5)",
+        "honors": ["string", "string"],
+        "relevantCoursework": ["string", "string"]
+        }}
+    ],
+    "skills": {{
+        "technical": {{
+        "programmingLanguages": ["string", "string"],
+        "frameworks": ["string", "string"],
+        "databases": ["string", "string"],
+        "tools": ["string", "string"],
+        "cloudPlatforms": ["string", "string"],
+        "other": ["string", "string"]
+        }},
+        "soft": ["string", "string", "string"]
+    }},
+    "projects": [
+        {{
+        "name": "string",
+        "description": "string",
+        "technologies": ["string", "string"],
+        "duration": "string",
+        "url": "string",
+        "github": "string",
+        "keyFeatures": ["string", "string"],
+        "impact": "string"
+        }}
+    ],
+    "certifications": [
+        {{
+        "name": "string",
+        "issuer": "string",
+        "date": "string (MM/YYYY format)",
+        "expiryDate": "string (if applicable)",
+        "credentialId": "string",
+        "url": "string"
+        }}
+    ],
+    "awards": [
+        {{
+        "title": "string",
+        "issuer": "string",
+        "date": "string (MM/YYYY format)",
+        "description": "string"
+        }}
+    ],
+    "languages": [
+        {{
+        "language": "string",
+        "proficiency": "string (Native, Fluent, Proficient, Intermediate, Basic)"
+        }}
+    ],
+    "volunteerWork": [
+        {{
+        "role": "string",
+        "organization": "string",
+        "duration": "string",
+        "description": "string",
+        "impact": "string"
+        }}
+    ],
+    "publications": [
+        {{
+        "title": "string",
+        "authors": ["string", "string"],
+        "journal": "string",
+        "date": "string (MM/YYYY format)",
+        "url": "string"
+        }}
+    ],
+    "metadata": {{
+        "lastUpdated": "string (current date)",
+        "template": "string (template preference if specified)",
+        "appliedSuggestions": ["string", "string"],
+        "correctedMistakes": ["string", "string"],
+        "tailoredFor": "string (job title if job description provided)"
+    }}
+    }}
+
+    **NOTE**: If you find additional information beyond the above JSON structure, include it in the appropriate sections or create new fields as needed.
+
+    ## Processing Guidelines
+
+    ### 1. Data Standardization
+    - **Dates**: Convert all dates to MM/YYYY format
+    - **Names**: Proper case formatting
+    - **Locations**: City, Country format
+    - **Phone Numbers**: Format consistently
+
+    ### 2. Content Enhancement
+    - **Action Verbs**: Start achievement bullets with strong action verbs
+    - **Quantification**: Add metrics and numbers where possible
+    - **Consistency**: Ensure consistent tense and formatting
+    - **Relevance**: Prioritize relevant information for the target role
+
+    ### 3. Error Correction
+    - Fix spelling and grammar mistakes
+    - Correct formatting inconsistencies
+    - Resolve date conflicts or gaps
+    - Standardize job titles and company names
+
+    ### 4. Optional Enhancements
+    - **Job Description Tailoring**: If job description is provided, emphasize relevant skills and experiences
+    - **Suggestion Implementation**: If analysis feedback is provided, incorporate recommended improvements
+
+    ### 5. Template Optimization
+    - Ensure all fields are properly populated for Handlebars rendering
+    - Use arrays for repeating elements
+    - Maintain consistent data types
+    - Include fallback values for optional fields
+
+    ## Output Requirements
+    - Valid JSON format with proper escaping
+    - All provided suggestions implemented
+    - Content tailored to job description (if provided)
+    - Comprehensive metadata tracking changes made
+    - Ready for Handlebars template processing
+
+    ---
+
+    ## Input Data:
+
+    **Resume Text:**
+    {text_from_pdf}
+    """
+
+        # Add job description if provided
+        if job_description:
+            prompt += f"\n**Job Description:**\n{job_description}\n"
+            prompt += "\n**Additional Instructions:** Tailor the resume content to highlight relevant skills and experiences for this specific job. Emphasize matching qualifications and use keywords from the job description appropriately.\n"
+        
+        # Add suggestions if provided
+        if suggestion:
+            prompt += f"\n**Analysis Feedback & Suggestions:**\n{suggestion}\n"
+            prompt += "\n**Additional Instructions:** Implement all provided suggestions and corrections. Track these changes in the metadata section.\n"
+        
+        # Add final instructions
+        prompt += "\n**Final Instructions:** Return ONLY the JSON object without any additional text, explanations, or markdown formatting. Ensure the JSON is valid and complete."
+        
+        try:
+            result = self.model.generate_content(prompt)
+            text = result.text  # Get plain text response
+            
+            # Clean the response - remove markdown formatting if present
+            cleaned_text = re.sub(r"^```json\n|```$", "", text.strip())
+            
+            # Additional cleaning for any remaining markdown or extra text
+            cleaned_text = re.sub(r"^```.*\n|```$", "", cleaned_text.strip())
+            
+            # Find JSON object in the response
+            json_start = cleaned_text.find('{')
+            json_end = cleaned_text.rfind('}') + 1
+            
+            if json_start != -1 and json_end != -1:
+                json_text = cleaned_text[json_start:json_end]
+                parsed_json = json.loads(json_text)
+                
+                # Add processing metadata
+                if 'metadata' not in parsed_json:
+                    parsed_json['metadata'] = {}
+                
+                parsed_json['metadata']['lastUpdated'] = datetime.now().strftime('%Y-%m-%d')
+                parsed_json['metadata']['hasJobDescription'] = bool(job_description)
+                parsed_json['metadata']['hasSuggestions'] = bool(suggestion)
+                
+                return parsed_json
+                
+            else:
+                return {"error": "No valid JSON found in response", "raw_output": text}
+                
+        except json.JSONDecodeError as e:
+            return {"error": f"Invalid JSON format: {str(e)}", "raw_output": text}
+        except Exception as e:
+            return {"error": f"Processing error: {str(e)}", "raw_output": text if 'text' in locals() else "No response"}
+
     def generate_cover_letter(self, data):
         prompt = f"""
             You are a professional cover letter writer. Your task is to create a polished, natural-sounding, and professionally written cover letter based only on the information provided below.
@@ -929,7 +1184,7 @@ def analyze_resume_with_genai(pdf_path: str, request):
     report = analyzer.generate_detailed_report(results)
     print(results)
 
-    specific_issues = results["detailed_analysis"]["genai_visual"]["specific_issues"]
+    specific_issues = results.get("detailed_analysis", {}).get("genai_visual", {}).get("specific_issues", [])
 
     result_pdf_url = None
     try:

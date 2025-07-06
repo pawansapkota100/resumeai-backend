@@ -120,3 +120,8 @@ class CoverLetterSerializer(serializers.Serializer):
             'blank': 'Please explain why you are interested in this position.'
         }
     )
+
+class ResumeGeneratorSerializer(serializers.Serializer):
+    pdf= serializers.FileField()
+    job_description = serializers.CharField(required=False)
+    suggestion = serializers.CharField(required=False)
